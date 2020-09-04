@@ -2,7 +2,7 @@
   <PropertyGroup>
     <TargetFramework>net472</TargetFramework>
     <RootNamespace>DvMod.AirBrake</RootNamespace>
-    <InformationalVersion>v0.1.0</InformationalVersion>
+    <InformationalVersion></InformationalVersion>
   </PropertyGroup>
 
   <ItemGroup>
