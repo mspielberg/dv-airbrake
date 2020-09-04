@@ -1,0 +1,16 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net472</TargetFramework>
+    <RootNamespace>DvMod.AirBrake</RootNamespace>
+    <InformationalVersion>v0.1.0</InformationalVersion>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Reference Include="0Harmony"/>
+    <Reference Include="Assembly-CSharp"/>
+    <Reference Include="HeadsUpDisplay"/>
+    <Reference Include="UnityEngine.CoreModule"/>
+    <Reference Include="UnityEngine.IMGUIModule"/>
+    <Reference Include="UnityModManager"/>
+  </ItemGroup>
+</Project>

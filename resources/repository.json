@@ -1,0 +1,6 @@
+{
+  "Releases":
+  [
+      {"Id": "AirBrake", "Version": "0.1.0", "DownloadUrl": "https://github.com/mspielberg/dv-airbrake/releases/download/v0.1.0/AirBrake_0.1.0.zip"}
+  ]
+}
