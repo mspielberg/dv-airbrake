@@ -6,11 +6,16 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <PackageReference Include="RedworkDE.Publicizer" Version="0.2.2" />
+    <PublicizeAssembly Include="Assembly-CSharp" Private="True" Readonly="True" />
+    <PublicizeAssembly Include="DV.BrakeSystem" Private="True" Readonly="True" />
+  </ItemGroup>
+  <ItemGroup>
     <Reference Include="0Harmony"/>
     <Reference Include="Assembly-CSharp"/>
+    <Reference Include="DV.BrakeSystem"/>
     <Reference Include="HeadsUpDisplay"/>
-    <Reference Include="UnityEngine.CoreModule"/>
-    <Reference Include="UnityEngine.IMGUIModule"/>
+    <Reference Include="UnityEngine.*"/>
     <Reference Include="UnityModManager"/>
   </ItemGroup>
 </Project>
