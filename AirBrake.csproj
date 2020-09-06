@@ -15,7 +15,7 @@
     <Reference Include="Assembly-CSharp"/>
     <Reference Include="DV.BrakeSystem"/>
     <Reference Include="HeadsUpDisplay"/>
-    <Reference Include="UnityEngine.*"/>
+    <Reference Include="UnityEngine.CoreModule"/>
     <Reference Include="UnityModManager"/>
   </ItemGroup>
 </Project>

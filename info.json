@@ -1,11 +1,11 @@
 {
-  "Id": "SteamCutoff",
-  "DisplayName": "Steam Cutoff",
+  "Id": "AirBrake",
+  "DisplayName": "Air Brake",
   "Author": "Zeibach",
   "Version": "0.5.1",
   "LoadAfter": ["HeadsUpDisplay"],
-  "AssemblyName": "SteamCutoff.dll",
-  "EntryMethod": "DvMod.SteamCutoff.Main.Load",
-  "HomePage": "https://www.nexusmods.com/derailvalley/mods/192",
-  "Repository": "https://raw.githubusercontent.com/mspielberg/dv-steamcutoff/master/repository.json"
+  "AssemblyName": "AirBrake.dll",
+  "EntryMethod": "DvMod.AirBrake.Main.Load",
+  "HomePage": "https://www.nexusmods.com/derailvalley/mods/",
+  "Repository": "https://raw.githubusercontent.com/mspielberg/dv-airbrake/master/repository.json"
 }
