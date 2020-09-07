@@ -110,7 +110,6 @@ namespace DvMod.AirBrake
             static void EqualizeWheelCylinder(float dt, BrakeSystem car, ref float otherPressure, float otherVolume, float speed)
             {
                 var data = extraBrakeData[car];
-                Main.DebugLog($"Calling EP between {data.cylinderPressure} and {otherPressure}");
                 Brakeset.EqualizePressure(
                     ref data.cylinderPressure,
                     ref otherPressure,
@@ -119,11 +118,11 @@ namespace DvMod.AirBrake
                     BrakeSystemConsts.EQUALIZATION_SPEED_MULTIPLIER * speed,
                     BrakeSystemConsts.EQUALIZATION_SPEED_LIMIT,
                     dt);
-                Main.DebugLog($"after: {data.cylinderPressure} and {otherPressure}");
             }
 
             static void Postfix(float dt)
             {
+                HandBrake.Update();
                 foreach (var brakeset in Brakeset.allSets)
                 {
                     if (AttachedToCurrentTrainset(brakeset))
@@ -181,7 +180,7 @@ namespace DvMod.AirBrake
                                 cylinderPressure,
                                 Mathf.Min(car.mainReservoirPressureUnsmoothed, BrakeSystemConsts.MAX_BRAKE_PIPE_PRESSURE * car.independentBrakePosition));
                         var cylinderBrakingFactor = Mathf.InverseLerp(THRESHOLD_PRESSURE, MAX_CYLINDER_PRESSURE, cylinderPressure);
-                        var mechanicalBrakingFactor = (car.hasIndependentBrake && !car.hasCompressor) ? car.independentBrakePosition : 0f; // Caboose only
+                        var mechanicalBrakingFactor = !car.hasCompressor ? car.independentBrakePosition : 0f; // Caboose only
                         car.brakingFactor = Mathf.Max(mechanicalBrakingFactor, cylinderBrakingFactor);
                         if (AttachedToCurrentTrainset(brakeset))
                             Main.DebugLog($"after: signal={signalPressure},pipe={brakeset.pipePressure},pipeVolume={brakeset.pipeVolume},reservoir={data.auxReservoirPressure},mode={mode},cylinder={cylinderPressure},mechFactor={mechanicalBrakingFactor},cylFactor={cylinderBrakingFactor},brakingFactor={car.brakingFactor}");
