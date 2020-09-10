@@ -2,10 +2,10 @@
   "Id": "AirBrake",
   "DisplayName": "Air Brake",
   "Author": "Zeibach",
-  "Version": "0.5.1",
+  "Version": "0.1.0",
   "LoadAfter": ["HeadsUpDisplay"],
   "AssemblyName": "AirBrake.dll",
   "EntryMethod": "DvMod.AirBrake.Main.Load",
-  "HomePage": "https://www.nexusmods.com/derailvalley/mods/",
-  "Repository": "https://raw.githubusercontent.com/mspielberg/dv-airbrake/master/repository.json"
+  "HomePage": "https://www.nexusmods.com/derailvalley/mods/213",
+  "Repository": "https://raw.githubusercontent.com/mspielberg/dv-airbrake/master/resources/repository.json"
 }
