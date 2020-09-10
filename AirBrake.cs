@@ -120,73 +120,101 @@ namespace DvMod.AirBrake
                     dt);
             }
 
+            static float GetSignalPressre(BrakeSystem car)
+            {
+                if (car.hasCompressor)
+                    return Mathf.Min(car.independentPipePressure, car.brakeset.pipePressure);
+                return car.brakeset.pipePressure;
+            }
+
+            static float SimulateLocoBrake(BrakeSystem car, float dt)
+            {
+                var signal = Mathf.Min(car.independentPipePressure, car.brakeset.pipePressure);
+                HeadsUpDisplayBridge.instance?.UpdateAuxReservoirPressure(BrakeSystemRegistry.GetTrainCar(car), car.mainReservoirPressure);
+                return BrakeSystemConsts.MAX_BRAKE_PIPE_PRESSURE - signal + 1f;
+            }
+
+            static float SimulateTripleValve(BrakeSystem car, float dt)
+            {
+                var brakeset = car.brakeset;
+                ExtraBrakeData data;
+                if (!extraBrakeData.TryGetValue(car, out data))
+                    extraBrakeData[car] = data = new ExtraBrakeData();
+                string mode;
+                if (brakeset.pipePressure > data.auxReservoirPressure)
+                {
+                    mode = "RELEASE/CHARGE";
+                    // RELEASE
+                    float atmosphere = 1f;
+                    EqualizeWheelCylinder(
+                        dt,
+                        car,
+                        ref atmosphere,
+                        BrakeSystemConsts.ATMOSPHERE_VOLUME,
+                        Main.settings.releaseSpeed);
+
+                    // CHARGE
+                    Brakeset.EqualizePressure(
+                        ref data.auxReservoirPressure,
+                        ref brakeset.pipePressure,
+                        CAR_RESERVOIR_VOLUME,
+                        brakeset.pipeVolume,
+                        BrakeSystemConsts.EQUALIZATION_SPEED_MULTIPLIER * Main.settings.chargeSpeed,
+                        BrakeSystemConsts.EQUALIZATION_SPEED_LIMIT,
+                        dt);
+                }
+                else if (brakeset.pipePressure < data.auxReservoirPressure - EPSILON)
+                {
+                    mode = "APPLY";
+                    // APPLY
+                    EqualizeWheelCylinder(
+                        dt,
+                        car,
+                        ref data.auxReservoirPressure,
+                        CAR_RESERVOIR_VOLUME,
+                        Main.settings.applySpeed);
+                }
+                else
+                {
+                    mode = "LAP";
+                    // LAP
+                }
+                HeadsUpDisplayBridge.instance?.UpdateAuxReservoirPressure(BrakeSystemRegistry.GetTrainCar(car), data.auxReservoirPressure);
+                if (AttachedToCurrentTrainset(brakeset))
+                    Main.DebugLog($"pipe={brakeset.pipePressure},pipeVolume={brakeset.pipeVolume},reservoir={data.auxReservoirPressure},mode={mode}");
+                return data.cylinderPressure;
+            }
+
             static void Postfix(float dt)
             {
-                HandBrake.Update();
+                if (!Main.enabled)
+                    return;
                 foreach (var brakeset in Brakeset.allSets)
                 {
                     if (AttachedToCurrentTrainset(brakeset))
                         Main.DebugLog($"Updating brakeset with {brakeset.cars.Count()} cars at {Time.time}.");
-                    foreach (var car in brakeset.cars)//.Where(c => !c.hasCompressor))
+                    foreach (var car in brakeset.cars)
                     {
-                        ExtraBrakeData data;
-                        if (!extraBrakeData.TryGetValue(car, out data))
-                            extraBrakeData[car] = data = new ExtraBrakeData();
-
-                        string mode;
-                        var signalPressure = brakeset.pipePressure;
-                        if (signalPressure > data.auxReservoirPressure + EPSILON)
-                        {
-                            mode = "RELEASE/CHARGE";
-                            // RELEASE
-                            float atmosphere = 1f;
-                            EqualizeWheelCylinder(
-                                dt,
-                                car,
-                                ref atmosphere,
-                                BrakeSystemConsts.ATMOSPHERE_VOLUME,
-                                Main.settings.releaseSpeed);
-
-                            // CHARGE
-                            Brakeset.EqualizePressure(
-                                ref data.auxReservoirPressure,
-                                ref brakeset.pipePressure,
-                                CAR_RESERVOIR_VOLUME,
-                                brakeset.pipeVolume,
-                                BrakeSystemConsts.EQUALIZATION_SPEED_MULTIPLIER * Main.settings.chargeSpeed,
-                                BrakeSystemConsts.EQUALIZATION_SPEED_LIMIT,
-                                dt);
-                        }
-                        else if (signalPressure < data.auxReservoirPressure - EPSILON)
-                        {
-                            mode = "APPLY";
-                            // APPLY
-                            EqualizeWheelCylinder(
-                                dt,
-                                car,
-                                ref data.auxReservoirPressure,
-                                CAR_RESERVOIR_VOLUME,
-                                Main.settings.applySpeed);
-                        }
-                        else
-                        {
-                            mode = "LAP";
-                            // LAP
-                        }
-
-                        var cylinderPressure = data.cylinderPressure;
-                        if (car.hasCompressor)
-                            cylinderPressure = Mathf.Max(
-                                cylinderPressure,
-                                Mathf.Min(car.mainReservoirPressureUnsmoothed, BrakeSystemConsts.MAX_BRAKE_PIPE_PRESSURE * car.independentBrakePosition));
+                        var cylinderPressure = car.hasCompressor ? SimulateLocoBrake(car, dt) : SimulateTripleValve(car, dt);
+                        HeadsUpDisplayBridge.instance?.UpdateBrakeCylinderPressure(BrakeSystemRegistry.GetTrainCar(car), cylinderPressure);
                         var cylinderBrakingFactor = Mathf.InverseLerp(THRESHOLD_PRESSURE, MAX_CYLINDER_PRESSURE, cylinderPressure);
                         var mechanicalBrakingFactor = !car.hasCompressor ? car.independentBrakePosition : 0f; // Caboose only
                         car.brakingFactor = Mathf.Max(mechanicalBrakingFactor, cylinderBrakingFactor);
-                        if (AttachedToCurrentTrainset(brakeset))
-                            Main.DebugLog($"after: signal={signalPressure},pipe={brakeset.pipePressure},pipeVolume={brakeset.pipeVolume},reservoir={data.auxReservoirPressure},mode={mode},cylinder={cylinderPressure},mechFactor={mechanicalBrakingFactor},cylFactor={cylinderBrakingFactor},brakingFactor={car.brakingFactor}");
                     }
                 }
             }
+        }
+    }
+
+    public static class BrakeSystemRegistry
+    {
+        static Dictionary<BrakeSystem, TrainCar> trainCars = new Dictionary<BrakeSystem, TrainCar>();
+
+        public static TrainCar GetTrainCar(BrakeSystem brakeSystem)
+        {
+            if (!trainCars.ContainsKey(brakeSystem))
+                trainCars[brakeSystem] = TrainCar.logicCarToTrainCar.Values.First(c => c.brakeSystem == brakeSystem);
+            return trainCars[brakeSystem];
         }
     }
 }
