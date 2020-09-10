@@ -11,8 +11,8 @@ namespace DvMod.AirBrake
     [EnableReloading]
     public static class Main
     {
-        public static UnityModManager.ModEntry mod;
-        public static Settings settings;
+        public static UnityModManager.ModEntry? mod;
+        public static Settings settings = new Settings();
         public static bool enabled;
 
         static bool Load(UnityModManager.ModEntry modEntry)
@@ -60,7 +60,7 @@ namespace DvMod.AirBrake
         public static void DebugLog(string message)
         {
             if (settings.enableLogging)
-                mod.Logger.Log(message);
+                mod?.Logger.Log(message);
         }
 
         public class Settings : UnityModManager.ModSettings, IDrawable

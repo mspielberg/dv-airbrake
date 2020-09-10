@@ -1,12 +1,11 @@
 using DvMod.HeadsUpDisplay;
-using UnityEngine;
 using UnityModManagerNet;
 
 namespace DvMod.AirBrake
 {
-    class HeadsUpDisplayBridge
+    internal class HeadsUpDisplayBridge
     {
-        public static HeadsUpDisplayBridge instance;
+        public static HeadsUpDisplayBridge? instance;
 
         static HeadsUpDisplayBridge()
         {
@@ -22,7 +21,7 @@ namespace DvMod.AirBrake
             }
         }
 
-        void Register()
+        private void Register()
         {
             PushProvider auxReservoirPressureProvider = new PushProvider(
                 "Aux reservoir pressure", () => true, v => v.ToString("F2"));
@@ -34,12 +33,14 @@ namespace DvMod.AirBrake
 
         public void UpdateAuxReservoirPressure(TrainCar car, float pressure)
         {
-            ((PushProvider)Registry.GetProvider(TrainCarType.NotSet, "Aux reservoir pressure")).MixSmoothedValue(car, pressure);
+            if (Registry.GetProvider(TrainCarType.NotSet, "Aux reservoir pressure") is PushProvider pp)
+                pp.MixSmoothedValue(car, pressure);
         }
 
         public void UpdateBrakeCylinderPressure(TrainCar car, float brakeCylinderPressure)
         {
-            ((PushProvider)Registry.GetProvider(TrainCarType.NotSet, "Brake cylinder pressure")).MixSmoothedValue(car, brakeCylinderPressure);
+            if (Registry.GetProvider(TrainCarType.NotSet, "Brake cylinder pressure") is PushProvider pp)
+                pp.MixSmoothedValue(car, brakeCylinderPressure);
         }
     }
 }
