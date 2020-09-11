@@ -15,7 +15,7 @@ namespace DvMod.AirBrake
         public static Settings settings = new Settings();
         public static bool enabled;
 
-        static bool Load(UnityModManager.ModEntry modEntry)
+        static public bool Load(UnityModManager.ModEntry modEntry)
         {
             mod = modEntry;
 
@@ -31,17 +31,17 @@ namespace DvMod.AirBrake
             return true;
         }
 
-        static void OnGui(UnityModManager.ModEntry modEntry)
+        static private void OnGui(UnityModManager.ModEntry modEntry)
         {
             settings.Draw(modEntry);
         }
 
-        static void OnSaveGui(UnityModManager.ModEntry modEntry)
+        static private void OnSaveGui(UnityModManager.ModEntry modEntry)
         {
             settings.Save(modEntry);
         }
 
-        static bool OnToggle(UnityModManager.ModEntry modEntry, bool value)
+        static private bool OnToggle(UnityModManager.ModEntry modEntry, bool value)
         {
             if (value != enabled)
             {
@@ -50,7 +50,7 @@ namespace DvMod.AirBrake
             return true;
         }
 
-        static bool OnUnload(UnityModManager.ModEntry modEntry)
+        static private bool OnUnload(UnityModManager.ModEntry modEntry)
         {
             var harmony = new Harmony(modEntry.Info.Id);
             harmony.UnpatchAll(modEntry.Info.Id);
@@ -83,31 +83,29 @@ namespace DvMod.AirBrake
     public static class AirBrake
     {
         [HarmonyPatch(typeof(Brakeset), nameof(Brakeset.Update))]
-        static class UpdatePatch
+        private static class UpdatePatch
         {
-            static bool AttachedToCurrentTrainset(Brakeset brakeset)
+            private static bool AttachedToCurrentTrainset(Brakeset brakeset)
             {
                 return PlayerManager.Car?.brakeSystem.brakeset == brakeset;
             }
 
-            const float BRAKE_CYLINDER_VOLUME = 1f;
-            const float CAR_RESERVOIR_VOLUME = 2.5f;
-            const float MAX_CYLINDER_PRESSURE = (BrakeSystemConsts.MAX_BRAKE_PIPE_PRESSURE * CAR_RESERVOIR_VOLUME + BRAKE_CYLINDER_VOLUME) / (CAR_RESERVOIR_VOLUME + BRAKE_CYLINDER_VOLUME);
-            const float EPSILON = 0.05f;
+            private const float BRAKE_CYLINDER_VOLUME = 1f;
+            private const float CAR_RESERVOIR_VOLUME = 2.5f;
+            private const float MAX_CYLINDER_PRESSURE =
+                ((BrakeSystemConsts.MAX_BRAKE_PIPE_PRESSURE * CAR_RESERVOIR_VOLUME) + BRAKE_CYLINDER_VOLUME) / (CAR_RESERVOIR_VOLUME + BRAKE_CYLINDER_VOLUME);
+            private const float EPSILON = 0.05f;
+            private const float THRESHOLD_PRESSURE = 1f /* atmospheric */ + 0.5f /* spring */;
 
-            const float APPLY_SPEED = 8f;
-            const float RELEASE_SPEED = 0.5f;
-            const float THRESHOLD_PRESSURE = 1f /* atmospheric */ + 0.5f /* spring */;
-
-            class ExtraBrakeData
+            private class ExtraBrakeData
             {
                 public float cylinderPressure = 1f;
                 public float auxReservoirPressure = 1f;
             }
 
-            static Dictionary<BrakeSystem, ExtraBrakeData> extraBrakeData = new Dictionary<BrakeSystem, ExtraBrakeData>();
+            private static readonly Cache<BrakeSystem, ExtraBrakeData> extraBrakeData = new Cache<BrakeSystem, ExtraBrakeData>(_ => new ExtraBrakeData());
 
-            static void EqualizeWheelCylinder(float dt, BrakeSystem car, ref float otherPressure, float otherVolume, float speed)
+            private static void EqualizeWheelCylinder(float dt, BrakeSystem car, ref float otherPressure, float otherVolume, float speed)
             {
                 var data = extraBrakeData[car];
                 Brakeset.EqualizePressure(
@@ -120,26 +118,17 @@ namespace DvMod.AirBrake
                     dt);
             }
 
-            static float GetSignalPressre(BrakeSystem car)
-            {
-                if (car.hasCompressor)
-                    return Mathf.Min(car.independentPipePressure, car.brakeset.pipePressure);
-                return car.brakeset.pipePressure;
-            }
-
-            static float SimulateLocoBrake(BrakeSystem car, float dt)
+            private static float SimulateLocoBrake(BrakeSystem car, float _)
             {
                 var signal = Mathf.Min(car.independentPipePressure, car.brakeset.pipePressure);
-                HeadsUpDisplayBridge.instance?.UpdateAuxReservoirPressure(BrakeSystemRegistry.GetTrainCar(car), car.mainReservoirPressure);
-                return BrakeSystemConsts.MAX_BRAKE_PIPE_PRESSURE - signal + 1f;
+                HeadsUpDisplayBridge.instance?.UpdateAuxReservoirPressure(car.GetTrainCar(), car.mainReservoirPressure);
+                return Mathf.Lerp(1f, BrakeSystemConsts.MAX_BRAKE_PIPE_PRESSURE, Mathf.InverseLerp(BrakeSystemConsts.MAX_BRAKE_PIPE_PRESSURE, 1f, signal));
             }
 
-            static float SimulateTripleValve(BrakeSystem car, float dt)
+            private static float SimulateTripleValve(BrakeSystem car, float dt)
             {
                 var brakeset = car.brakeset;
-                ExtraBrakeData data;
-                if (!extraBrakeData.TryGetValue(car, out data))
-                    extraBrakeData[car] = data = new ExtraBrakeData();
+                ExtraBrakeData data = extraBrakeData[car];
                 string mode;
                 if (brakeset.pipePressure > data.auxReservoirPressure)
                 {
@@ -179,24 +168,24 @@ namespace DvMod.AirBrake
                     mode = "LAP";
                     // LAP
                 }
-                HeadsUpDisplayBridge.instance?.UpdateAuxReservoirPressure(BrakeSystemRegistry.GetTrainCar(car), data.auxReservoirPressure);
+                HeadsUpDisplayBridge.instance?.UpdateAuxReservoirPressure(car.GetTrainCar(), data.auxReservoirPressure);
                 if (AttachedToCurrentTrainset(brakeset))
                     Main.DebugLog($"pipe={brakeset.pipePressure},pipeVolume={brakeset.pipeVolume},reservoir={data.auxReservoirPressure},mode={mode}");
                 return data.cylinderPressure;
             }
 
-            static void Postfix(float dt)
+            public static void Postfix(float dt)
             {
                 if (!Main.enabled)
                     return;
                 foreach (var brakeset in Brakeset.allSets)
                 {
                     if (AttachedToCurrentTrainset(brakeset))
-                        Main.DebugLog($"Updating brakeset with {brakeset.cars.Count()} cars at {Time.time}.");
+                        Main.DebugLog($"Updating brakeset with {brakeset.cars.Count} cars at {Time.time}.");
                     foreach (var car in brakeset.cars)
                     {
                         var cylinderPressure = car.hasCompressor ? SimulateLocoBrake(car, dt) : SimulateTripleValve(car, dt);
-                        HeadsUpDisplayBridge.instance?.UpdateBrakeCylinderPressure(BrakeSystemRegistry.GetTrainCar(car), cylinderPressure);
+                        HeadsUpDisplayBridge.instance?.UpdateBrakeCylinderPressure(car.GetTrainCar(), cylinderPressure);
                         var cylinderBrakingFactor = Mathf.InverseLerp(THRESHOLD_PRESSURE, MAX_CYLINDER_PRESSURE, cylinderPressure);
                         var mechanicalBrakingFactor = !car.hasCompressor ? car.independentBrakePosition : 0f; // Caboose only
                         car.brakingFactor = Mathf.Max(mechanicalBrakingFactor, cylinderBrakingFactor);
@@ -206,15 +195,32 @@ namespace DvMod.AirBrake
         }
     }
 
-    public static class BrakeSystemRegistry
+    public static class BrakeSystemExtensions
     {
-        static Dictionary<BrakeSystem, TrainCar> trainCars = new Dictionary<BrakeSystem, TrainCar>();
+        private static readonly Cache<BrakeSystem, TrainCar> trainCars =
+            new Cache<BrakeSystem, TrainCar>(bs => TrainCar.logicCarToTrainCar.Values.First(c => c.brakeSystem == bs));
+        public static TrainCar GetTrainCar(this BrakeSystem brakeSystem) => trainCars[brakeSystem];
+    }
 
-        public static TrainCar GetTrainCar(BrakeSystem brakeSystem)
+    public class Cache<TKey, TEntry>
+    {
+        private readonly Func<TKey, TEntry> generator;
+        private readonly Dictionary<TKey, TEntry> cache = new Dictionary<TKey, TEntry>();
+
+        public Cache(Func<TKey, TEntry> generator)
         {
-            if (!trainCars.ContainsKey(brakeSystem))
-                trainCars[brakeSystem] = TrainCar.logicCarToTrainCar.Values.First(c => c.brakeSystem == brakeSystem);
-            return trainCars[brakeSystem];
+            this.generator = generator;
+        }
+
+        public TEntry this[TKey key]
+        {
+            get {
+                if (cache.TryGetValue(key, out TEntry entry))
+                    return entry;
+                entry = generator(key);
+                cache[key] = entry;
+                return entry;
+            }
         }
     }
 }
