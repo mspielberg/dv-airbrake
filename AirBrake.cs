@@ -191,7 +191,6 @@ namespace DvMod.AirBrake
                 car.mainReservoirPressure = Mathf.SmoothDamp(car.mainReservoirPressure, car.mainReservoirPressureUnsmoothed, ref car.mainResPressureRef, 0.8f);
             }
 
-            private const float EqualizationSpeed = 100f;
             private static void EqualizeBrakePipe(Brakeset brakeset, float dt)
             {
                 var cars = brakeset.cars.AsReadOnly();
@@ -204,8 +203,8 @@ namespace DvMod.AirBrake
                         ref b.brakePipePressure,
                         BrakeSystemConsts.PIPE_VOLUME,
                         BrakeSystemConsts.PIPE_VOLUME,
-                        EqualizationSpeed,
-                        EqualizationSpeed
+                        Main.settings.pipeBalanceSpeed,
+                        Main.settings.pipeBalanceSpeed
                     );
                 }
                 brakeset.firstCar.Front.UpdatePressurized();
