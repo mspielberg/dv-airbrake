@@ -1,6 +1,7 @@
 using DV.Simulation.Brake;
 using DvMod.AirBrake.Components;
 using HarmonyLib;
+using System.Linq;
 using UnityEngine;
 
 namespace DvMod.AirBrake
@@ -179,16 +180,21 @@ namespace DvMod.AirBrake
                 car.mainReservoirPressure = Mathf.SmoothDamp(car.mainReservoirPressure, car.mainReservoirPressureUnsmoothed, ref car.mainResPressureRef, 0.8f);
             }
 
+            private const float EqualizationSpeed = 100f;
             private static void EqualizeBrakePipe(Brakeset brakeset, float dt)
             {
-                foreach (var car in brakeset.cars)
+                var cars = brakeset.cars.AsReadOnly();
+                foreach (var (a, b) in cars.Zip(cars.Skip(1), (a, b) => (a, b)))
                 {
+                    AirBrake.DebugLog(a, $"EqualizeBrakePipe: a={a.brakePipePressure}, b={b.brakePipePressure}");
                     AirSystem.Equalize(
                         dt,
-                        ref car.brakePipePressure,
-                        ref brakeset.pipePressure,
+                        ref a.brakePipePressure,
+                        ref b.brakePipePressure,
                         BrakeSystemConsts.PIPE_VOLUME,
-                        BrakeSystemConsts.PIPE_VOLUME
+                        BrakeSystemConsts.PIPE_VOLUME,
+                        EqualizationSpeed,
+                        EqualizationSpeed
                     );
                 }
                 brakeset.firstCar.Front.UpdatePressurized();
