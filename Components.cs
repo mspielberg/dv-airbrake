@@ -85,7 +85,7 @@ namespace DvMod.AirBrake.Components
 
             private static float Vent(BrakeSystem car, float dt)
             {
-                return AirSystem.Vent(dt, ref car.brakePipePressure, BrakeSystemConsts.PIPE_VOLUME);
+                return AirSystem.Vent(dt, ref car.brakePipePressure, BrakeSystemConsts.PIPE_VOLUME, Main.settings.applySpeed);
             }
 
             public static (float, float) Update(BrakeSystem car, float dt)
