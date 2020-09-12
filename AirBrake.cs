@@ -1,4 +1,4 @@
-﻿using DV.Simulation.Brake;
+using DV.Simulation.Brake;
 using HarmonyLib;
 using System;
 using System.Collections.Generic;

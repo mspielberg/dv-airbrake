@@ -1,4 +1,4 @@
-﻿using DV.Simulation.Brake;
+using DV.Simulation.Brake;
 using DvMod.AirBrake.Components;
 using HarmonyLib;
 using System;
