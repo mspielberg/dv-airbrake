@@ -14,13 +14,13 @@ namespace DvMod.AirBrake
         public const float AUX_RESERVOIR_VOLUME = 2.5f;
         public const float MAX_CYLINDER_PRESSURE =
             ((BrakeSystemConsts.MAX_BRAKE_PIPE_PRESSURE * AUX_RESERVOIR_VOLUME) + BRAKE_CYLINDER_VOLUME) / (AUX_RESERVOIR_VOLUME + BRAKE_CYLINDER_VOLUME);
-        public const float CylinderThresholdPressure = 0.5f;
+        public const float THRESHOLD_PRESSURE = 1f /* atmospheric */ + 0.5f /* spring */;
     }
 
     internal class ExtraBrakeState
     {
-        public float cylinderPressure = 0f;
-        public float auxReservoirPressure = 0f;
+        public float cylinderPressure = 1f;
+        public float auxReservoirPressure = 1f;
 
         private static readonly Cache<BrakeSystem, ExtraBrakeState> cache = new Cache<BrakeSystem, ExtraBrakeState>(_ => new ExtraBrakeState());
         public static ExtraBrakeState Instance(BrakeSystem system) => cache[system];
@@ -62,16 +62,6 @@ namespace DvMod.AirBrake
 
     public static class AirBrake
     {
-        [HarmonyPatch(typeof(TrainCar), nameof(TrainCar.Awake))]
-        static class TrainCarAwakePatch
-        {
-            public static void Postfix(TrainCar __instance)
-            {
-                __instance.brakeSystem.brakePipePressure = 0f;
-                __instance.brakeSystem.mainReservoirPressure = 0f;
-            }
-        }
-
         [HarmonyPatch(typeof(Brakeset), nameof(Brakeset.Update))]
         static class BrakesetUpdatePatch
         {
@@ -222,7 +212,7 @@ namespace DvMod.AirBrake
             private static void ApplyBrakingForce(BrakeSystem car)
             {
                 var state = ExtraBrakeState.Instance(car);
-                var cylinderBrakingFactor = Mathf.InverseLerp(Constants.CylinderThresholdPressure, Constants.MAX_CYLINDER_PRESSURE, state.cylinderPressure);
+                var cylinderBrakingFactor = Mathf.InverseLerp(Constants.THRESHOLD_PRESSURE, Constants.MAX_CYLINDER_PRESSURE, state.cylinderPressure);
                 var mechanicalBrakingFactor = GetMechanicalBrakeFactor(car);
                 car.brakingFactor = Mathf.Max(mechanicalBrakingFactor, cylinderBrakingFactor);
             }
