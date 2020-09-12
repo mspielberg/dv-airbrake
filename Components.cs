@@ -24,9 +24,9 @@ namespace DvMod.AirBrake.Components
 
         static public void Update(Brakeset brakeset, float dt)
         {
-            AngleCocks.Update(brakeset.firstCar, dt);
+            Update(brakeset.firstCar, dt);
             if (brakeset.firstCar != brakeset.lastCar)
-                AngleCocks.Update(brakeset.lastCar, dt);
+                Update(brakeset.lastCar, dt);
         }
     }
 
