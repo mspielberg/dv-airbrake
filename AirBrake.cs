@@ -80,6 +80,36 @@ namespace DvMod.AirBrake
         }
     }
 
+    static internal class Constants
+    {
+        public const float BRAKE_CYLINDER_VOLUME = 1f;
+        public const float AUX_RESERVOIR_VOLUME = 2.5f;
+        public const float MAX_CYLINDER_PRESSURE =
+            ((BrakeSystemConsts.MAX_BRAKE_PIPE_PRESSURE * AUX_RESERVOIR_VOLUME) + BRAKE_CYLINDER_VOLUME) / (AUX_RESERVOIR_VOLUME + BRAKE_CYLINDER_VOLUME);
+        public const float THRESHOLD_PRESSURE = 1f /* atmospheric */ + 0.5f /* spring */;
+    }
+
+    internal class ExtraBrakeState
+    {
+        public float cylinderPressure = 1f;
+        public float auxReservoirPressure = 1f;
+
+        private static readonly Cache<BrakeSystem, ExtraBrakeState> cache = new Cache<BrakeSystem, ExtraBrakeState>(_ => new ExtraBrakeState());
+        public static ExtraBrakeState Instance(BrakeSystem system) => cache[system];
+
+        public void EqualizeWheelCylinder(float dt, ref float otherPressure, float otherVolume, float speed = 1f)
+        {
+            Brakeset.EqualizePressure(
+                ref cylinderPressure,
+                ref otherPressure,
+                Constants.BRAKE_CYLINDER_VOLUME,
+                otherVolume,
+                BrakeSystemConsts.EQUALIZATION_SPEED_MULTIPLIER * speed,
+                BrakeSystemConsts.EQUALIZATION_SPEED_LIMIT,
+                dt);
+        }
+    }
+
     public static class AirBrake
     {
         [HarmonyPatch(typeof(Brakeset), nameof(Brakeset.Update))]
@@ -94,29 +124,7 @@ namespace DvMod.AirBrake
             private const float CAR_RESERVOIR_VOLUME = 2.5f;
             private const float MAX_CYLINDER_PRESSURE =
                 ((BrakeSystemConsts.MAX_BRAKE_PIPE_PRESSURE * CAR_RESERVOIR_VOLUME) + BRAKE_CYLINDER_VOLUME) / (CAR_RESERVOIR_VOLUME + BRAKE_CYLINDER_VOLUME);
-            private const float EPSILON = 0.05f;
             private const float THRESHOLD_PRESSURE = 1f /* atmospheric */ + 0.5f /* spring */;
-
-            private class ExtraBrakeData
-            {
-                public float cylinderPressure = 1f;
-                public float auxReservoirPressure = 1f;
-            }
-
-            private static readonly Cache<BrakeSystem, ExtraBrakeData> extraBrakeData = new Cache<BrakeSystem, ExtraBrakeData>(_ => new ExtraBrakeData());
-
-            private static void EqualizeWheelCylinder(float dt, BrakeSystem car, ref float otherPressure, float otherVolume, float speed)
-            {
-                var data = extraBrakeData[car];
-                Brakeset.EqualizePressure(
-                    ref data.cylinderPressure,
-                    ref otherPressure,
-                    BRAKE_CYLINDER_VOLUME,
-                    otherVolume,
-                    BrakeSystemConsts.EQUALIZATION_SPEED_MULTIPLIER * speed,
-                    BrakeSystemConsts.EQUALIZATION_SPEED_LIMIT,
-                    dt);
-            }
 
             private static float SimulateLocoBrake(BrakeSystem car, float _)
             {
@@ -128,7 +136,7 @@ namespace DvMod.AirBrake
             private static float SimulateTripleValve(BrakeSystem car, float dt)
             {
                 var brakeset = car.brakeset;
-                ExtraBrakeData data = extraBrakeData[car];
+                ExtraBrakeState data = extraBrakeData[car];
                 string mode;
                 if (brakeset.pipePressure > data.auxReservoirPressure)
                 {
@@ -198,7 +206,7 @@ namespace DvMod.AirBrake
     public static class BrakeSystemExtensions
     {
         private static readonly Cache<BrakeSystem, TrainCar> trainCars =
-            new Cache<BrakeSystem, TrainCar>(bs => TrainCar.logicCarToTrainCar.Values.First(c => c.brakeSystem == bs));
+            new Cache<BrakeSystem, TrainCar>(bs => TrainCar.Resolve(bs.gameObject));
         public static TrainCar GetTrainCar(this BrakeSystem brakeSystem) => trainCars[brakeSystem];
     }
 
