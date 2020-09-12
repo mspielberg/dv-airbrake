@@ -23,18 +23,6 @@ namespace DvMod.AirBrake
 
         private static readonly Cache<BrakeSystem, ExtraBrakeState> cache = new Cache<BrakeSystem, ExtraBrakeState>(_ => new ExtraBrakeState());
         public static ExtraBrakeState Instance(BrakeSystem system) => cache[system];
-
-        public void EqualizeWheelCylinder(float dt, ref float otherPressure, float otherVolume, float speed = 1f)
-        {
-            Brakeset.EqualizePressure(
-                ref cylinderPressure,
-                ref otherPressure,
-                Constants.BRAKE_CYLINDER_VOLUME,
-                otherVolume,
-                BrakeSystemConsts.EQUALIZATION_SPEED_MULTIPLIER * speed,
-                BrakeSystemConsts.EQUALIZATION_SPEED_LIMIT,
-                dt);
-        }
     }
 
     public static class BrakeSystemExtensions

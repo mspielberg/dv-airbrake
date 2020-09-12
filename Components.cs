@@ -35,30 +35,30 @@ namespace DvMod.AirBrake.Components
             if (car.brakePipePressure > state.auxReservoirPressure)
             {
                 // RELEASE
-                float atmosphere = 1f;
-                state.EqualizeWheelCylinder(
+                AirSystem.Vent(
                     dt,
-                    ref atmosphere,
-                    BrakeSystemConsts.ATMOSPHERE_VOLUME,
+                    ref state.cylinderPressure,
+                    Constants.BRAKE_CYLINDER_VOLUME,
                     Main.settings.releaseSpeed);
 
                 // CHARGE
-                Brakeset.EqualizePressure(
-                    ref state.auxReservoirPressure,
+                AirSystem.OneWayFlow(
+                    dt,
                     ref car.brakePipePressure,
-                    Constants.AUX_RESERVOIR_VOLUME,
+                    ref state.auxReservoirPressure,
                     BrakeSystemConsts.PIPE_VOLUME,
-                    BrakeSystemConsts.EQUALIZATION_SPEED_MULTIPLIER * Main.settings.chargeSpeed,
-                    BrakeSystemConsts.EQUALIZATION_SPEED_LIMIT,
-                    dt);
+                    Constants.AUX_RESERVOIR_VOLUME,
+                    Main.settings.chargeSpeed);
             }
             else if (car.brakePipePressure < state.auxReservoirPressure - Constants.ApplicationThreshold)
             {
                 // APPLY
-                state.EqualizeWheelCylinder(
+                AirSystem.Equalize(
                     dt,
                     ref state.auxReservoirPressure,
+                    ref state.cylinderPressure,
                     Constants.AUX_RESERVOIR_VOLUME,
+                    Constants.BRAKE_CYLINDER_VOLUME,
                     Main.settings.applySpeed);
             }
             else
@@ -103,7 +103,7 @@ namespace DvMod.AirBrake.Components
         {
             private static float Charge(BrakeSystem car, float dt, float targetPressure)
             {
-                AirBrake.DebugLog(car, $"26SA.Charge");
+                // AirBrake.DebugLog(car, $"26SA.Charge");
                 var state = ExtraBrakeState.Instance(car);
                 var pressureRequested = targetPressure - state.cylinderPressure; 
                 var flowLimit = Mathf.Min(1f, pressureRequested);
@@ -119,7 +119,7 @@ namespace DvMod.AirBrake.Components
 
             private static float Vent(BrakeSystem car, float dt)
             {
-                AirBrake.DebugLog(car, $"26SA.Vent");
+                // AirBrake.DebugLog(car, $"26SA.Vent");
                 var state = ExtraBrakeState.Instance(car);
                 return AirSystem.Vent(dt, ref state.cylinderPressure, BrakeSystemConsts.PIPE_VOLUME);
             }
