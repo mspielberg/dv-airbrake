@@ -77,9 +77,9 @@ namespace DvMod.AirBrake.Components
                 return AirSystem.OneWayFlow(
                     dt,
                     ref car.mainReservoirPressureUnsmoothed,
-                    ref car.brakeset.pipePressure,
+                    ref car.brakePipePressure,
                     BrakeSystemConsts.RESERVOIR_VOLUME,
-                    car.brakeset.pipeVolume,
+                    BrakeSystemConsts.PIPE_VOLUME,
                     RechargeSpeed);
             }
 
