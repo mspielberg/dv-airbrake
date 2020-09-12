@@ -61,11 +61,11 @@ namespace DvMod.AirBrake
 
         public class Settings : UnityModManager.ModSettings, IDrawable
         {
-            [Draw("Air compressor production")] public float compressorSpeed = 0.2f;
+            [Draw("Air compressor production")] public float compressorSpeed = 0.5f;
             [Draw("Brake pipe balance speed")] public float pipeBalanceSpeed = 600f;
             [Draw("Brake application speed")] public float applySpeed = 10f;
             [Draw("Brake release speed")] public float releaseSpeed = 0.25f;
-            [Draw("Brake recharge speed")] public float chargeSpeed = 1f;
+            [Draw("Brake recharge speed")] public float chargeSpeed = 0.5f;
 
             [Draw("Enable logging")] public bool enableLogging = false;
 
