@@ -105,7 +105,7 @@ namespace DvMod.AirBrake.Components
             {
                 // AirBrake.DebugLog(car, $"26SA.Charge");
                 var state = ExtraBrakeState.Instance(car);
-                var pressureRequested = targetPressure - state.cylinderPressure; 
+                var pressureRequested = targetPressure - state.cylinderPressure;
                 var flowLimit = Mathf.Min(1f, pressureRequested);
                 return AirSystem.OneWayFlow(
                     dt,

@@ -14,6 +14,8 @@ namespace DvMod.AirBrake
         public const float AUX_RESERVOIR_VOLUME = 2.5f;
         public const float MAX_CYLINDER_PRESSURE =
             ((BrakeSystemConsts.MAX_BRAKE_PIPE_PRESSURE * AUX_RESERVOIR_VOLUME) + BRAKE_CYLINDER_VOLUME) / (AUX_RESERVOIR_VOLUME + BRAKE_CYLINDER_VOLUME);
+
+        public const float MaxMainReservoirPressure = 8f;
         public const float CylinderThresholdPressure = 0.5f;
     }
 
@@ -38,6 +40,14 @@ namespace DvMod.AirBrake
 
     internal static class AirSystem
     {
+        /// <summary>Simulates air exchange between two connected components.</summary>
+        /// <param name="dt">Time period to simulate.</param>
+        /// <param name="p1"></param>
+        /// <param name="p2"></param>
+        /// <param name="v1"></param>
+        /// <param name="v2"></param>
+        /// <param name="multiplier"></param>
+        /// <param name="limit"></param>
         /// <returns>Rate of change of p1 normalized to bar/s</returns>
         public static float Equalize(float dt, ref float p1, ref float p2, float v1, float v2, float multiplier = 1f, float limit = 1f)
         {
@@ -63,7 +73,7 @@ namespace DvMod.AirBrake
     public static class AirBrake
     {
         [HarmonyPatch(typeof(TrainCar), nameof(TrainCar.Awake))]
-        static class TrainCarAwakePatch
+        public static class TrainCarAwakePatch
         {
             public static void Postfix(TrainCar __instance)
             {
@@ -73,7 +83,7 @@ namespace DvMod.AirBrake
         }
 
         [HarmonyPatch(typeof(Brakeset), nameof(Brakeset.Update))]
-        static class BrakesetUpdatePatch
+        public static class BrakesetUpdatePatch
         {
             private static void RechargeMainReservoir(BrakeSystem car, float dt)
             {
@@ -81,7 +91,7 @@ namespace DvMod.AirBrake
                 {
                     var increase = car.compressorProductionRate * Main.settings.compressorSpeed * dt;
                     car.mainReservoirPressureUnsmoothed =
-                         Mathf.Clamp(car.mainReservoirPressureUnsmoothed + increase, 0f, BrakeSystemConsts.MAX_MAIN_RES_PRESSURE);
+                         Mathf.Clamp(car.mainReservoirPressureUnsmoothed + increase, 0f, Constants.MaxMainReservoirPressure);
                 }
                 car.mainReservoirPressure = Mathf.SmoothDamp(car.mainReservoirPressure, car.mainReservoirPressureUnsmoothed, ref car.mainResPressureRef, 0.8f);
             }
