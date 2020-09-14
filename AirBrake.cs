@@ -21,8 +21,8 @@ namespace DvMod.AirBrake
 
     internal class ExtraBrakeState
     {
-        public float cylinderPressure = 0f;
-        public float auxReservoirPressure = 0f;
+        public float cylinderPressure;
+        public float auxReservoirPressure;
 
         private static readonly Cache<BrakeSystem, ExtraBrakeState> cache = new Cache<BrakeSystem, ExtraBrakeState>(_ => new ExtraBrakeState());
         public static ExtraBrakeState Instance(BrakeSystem system) => cache[system];
@@ -79,6 +79,20 @@ namespace DvMod.AirBrake
             {
                 __instance.brakeSystem.brakePipePressure = 0f;
                 __instance.brakeSystem.mainReservoirPressure = 0f;
+                __instance.brakeSystem.mainReservoirPressureUnsmoothed = 0f;
+
+                __instance.InteriorPrefabLoaded += (gameObject) => {
+                    var mainResIndicator = __instance.carType switch
+                    {
+                        TrainCarType.LocoDiesel => gameObject.GetComponent<IndicatorsDiesel>().brakeAux,
+                        TrainCarType.LocoShunter => gameObject.GetComponent<IndicatorsShunter>().brakeAux,
+                        TrainCarType.LocoSteamHeavy => gameObject.GetComponent<IndicatorsSteam>().brakeAux,
+                        _ => default
+                    };
+                    if (mainResIndicator == null)
+                        return;
+                    mainResIndicator.maxValue = Constants.MaxMainReservoirPressure;
+                };
             }
         }
 
@@ -101,7 +115,7 @@ namespace DvMod.AirBrake
                 var cars = brakeset.cars.AsReadOnly();
                 foreach (var (a, b) in cars.Zip(cars.Skip(1), (a, b) => (a, b)))
                 {
-                    AirBrake.DebugLog(a, $"EqualizeBrakePipe: a={a.brakePipePressure}, b={b.brakePipePressure}");
+                    // AirBrake.DebugLog(a, $"EqualizeBrakePipe: a={a.brakePipePressure}, b={b.brakePipePressure}");
                     AirSystem.Equalize(
                         dt,
                         ref a.brakePipePressure,
