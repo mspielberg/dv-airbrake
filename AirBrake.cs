@@ -3,17 +3,19 @@ using DvMod.AirBrake.Components;
 using HarmonyLib;
 using System.Linq;
 using UnityEngine;
+using UnityEngine.Assertions;
 
 namespace DvMod.AirBrake
 {
     static internal class Constants
     {
-        public const float ApplicationThreshold = 0.05f;
+        public const float AtmosphereVolume = 1e6f;
+        public const float ApplicationThreshold = 0.01f;
 
-        public const float BRAKE_CYLINDER_VOLUME = 1f;
+        public const float BrakeCylinderVolume = 1f;
         public const float AUX_RESERVOIR_VOLUME = 2.5f;
-        public const float MAX_CYLINDER_PRESSURE =
-            ((BrakeSystemConsts.MAX_BRAKE_PIPE_PRESSURE * AUX_RESERVOIR_VOLUME) + BRAKE_CYLINDER_VOLUME) / (AUX_RESERVOIR_VOLUME + BRAKE_CYLINDER_VOLUME);
+        public const float FullApplicationPressure =
+            BrakeSystemConsts.MAX_BRAKE_PIPE_PRESSURE * AUX_RESERVOIR_VOLUME / (AUX_RESERVOIR_VOLUME + BrakeCylinderVolume);
 
         public const float MaxMainReservoirPressure = 8f;
         public const float CylinderThresholdPressure = 0.5f;
@@ -23,6 +25,7 @@ namespace DvMod.AirBrake
     {
         public float cylinderPressure;
         public float auxReservoirPressure;
+        public PlainTripleValve.Mode tripleValveMode;
 
         private static readonly Cache<BrakeSystem, ExtraBrakeState> cache = new Cache<BrakeSystem, ExtraBrakeState>(_ => new ExtraBrakeState());
         public static ExtraBrakeState Instance(BrakeSystem system) => cache[system];
@@ -38,35 +41,55 @@ namespace DvMod.AirBrake
             ref ExtraBrakeState.Instance(brakeSystem).cylinderPressure;
     }
 
-    internal static class AirSystem
+    internal static class AirFlow
     {
-        /// <summary>Simulates air exchange between two connected components.</summary>
-        /// <param name="dt">Time period to simulate.</param>
-        /// <param name="p1"></param>
-        /// <param name="p2"></param>
-        /// <param name="v1"></param>
-        /// <param name="v2"></param>
-        /// <param name="multiplier"></param>
-        /// <param name="limit"></param>
-        /// <returns>Rate of change of p1 normalized to bar/s</returns>
-        public static float Equalize(float dt, ref float p1, ref float p2, float v1, float v2, float multiplier = 1f, float limit = 1f)
+        private static void AdjustMass(ref float pressure, float volume, float deltaMass, float min, float max)
+            => pressure = Mathf.Clamp(pressure + (deltaMass / volume), min, max);
+
+        public static float TransferMass(ref float destPressure, ref float srcPressure, float destVolume, float srcVolume, float massTransferToLimit)
         {
-            var before = p1;
-            Brakeset.EqualizePressure(ref p1, ref p2, v1, v2, multiplier * BrakeSystemConsts.EQUALIZATION_SPEED_MULTIPLIER, limit * BrakeSystemConsts.EQUALIZATION_SPEED_LIMIT, dt);
-            return dt == 0f ? 0f : (p1 - before) / dt;
+            Assert.IsTrue(destPressure <= srcPressure);
+            var totalMass = (destPressure * destVolume) + (srcPressure * srcVolume);
+            var totalVolume = destVolume + srcVolume;
+            var equilibriumPressure = totalMass / totalVolume;
+            var massTransferToEquilibrium = (equilibriumPressure - destPressure) * destVolume;
+            var massTransfer = Mathf.Min(massTransferToLimit, massTransferToEquilibrium);
+
+            AdjustMass(ref srcPressure, srcVolume, -massTransfer, equilibriumPressure, srcPressure);
+            AdjustMass(ref destPressure, destVolume, massTransfer, destPressure, equilibriumPressure);
+
+            Assert.IsTrue(destPressure <= srcPressure);
+            return massTransfer;
         }
 
-        public static float OneWayFlow(float dt, ref float fromPressure, ref float toPressure, float fromVolume, float toVolume, float speed = 1f, float limit = 1f)
+        public static float TransferPressure(ref float destPressure, ref float srcPressure, float destVolume, float srcVolume, float pressureChangeLimit)
+            => TransferMass(ref destPressure, ref srcPressure, destVolume, srcVolume, pressureChangeLimit * destVolume);
+
+        public static float Equalize(float dt, ref float p1, ref float p2, float v1, float v2, float rateMultiplier, float pressureChangeLimit = float.PositiveInfinity)
         {
-            if (fromPressure <= toPressure)
-                return 0f;
-            return Equalize(dt, ref toPressure, ref fromPressure, toVolume, fromVolume, speed, limit);
+            if (p1 > p2)
+                return Equalize(dt, ref p2, ref p1, v2, v1, rateMultiplier, pressureChangeLimit);
+
+            var pressureDelta = p2 - p1;
+            Assert.IsTrue(pressureDelta >= 0);
+            var naturalMassTransfer = Mathf.Sqrt(pressureDelta) * rateMultiplier * dt;
+            var massTransferToLimit = pressureChangeLimit * v1;
+            var actualTransfer = TransferMass(ref p1, ref p2, v1, v2, Mathf.Min(naturalMassTransfer, massTransferToLimit));
+            return actualTransfer;
         }
 
-        public static float Vent(float dt, ref float pressure, float volume, float speed = 1f, float limit = 1f)
+        public static float OneWayFlow(float dt, ref float destPressure, ref float srcPressure, float destVolume,
+            float srcVolume, float multiplier = 1f, float pressureChangeLimit = float.PositiveInfinity)
+        {
+            return srcPressure <= destPressure ? 0f
+                : Equalize(dt, ref destPressure, ref srcPressure, destVolume, srcVolume, multiplier, pressureChangeLimit);
+        }
+
+        public static float Vent(float dt, ref float pressure, float volume, float multiplier = 1f, float pressureChangeLimit = float.PositiveInfinity)
         {
             float atmosphere = 0f;
-            return OneWayFlow(dt, ref pressure, ref atmosphere, volume, BrakeSystemConsts.ATMOSPHERE_VOLUME, speed, limit);
+            // Main.DebugLog($"AirBrake.Vent: P={pressure}, V={volume}");
+            return OneWayFlow(dt, ref atmosphere, ref pressure, Constants.AtmosphereVolume, volume, multiplier, pressureChangeLimit);
         }
     }
 
@@ -81,8 +104,11 @@ namespace DvMod.AirBrake
                 __instance.brakeSystem.mainReservoirPressure = 0f;
                 __instance.brakeSystem.mainReservoirPressureUnsmoothed = 0f;
 
-                __instance.InteriorPrefabLoaded += (gameObject) => {
-                    var mainResIndicator = __instance.carType switch
+                __instance.InteriorPrefabLoaded += (gameObject) =>
+                {
+                    if (gameObject == null)
+                        return;
+                    var mainResIndicator = TrainCar.Resolve(gameObject).carType switch
                     {
                         TrainCarType.LocoDiesel => gameObject.GetComponent<IndicatorsDiesel>().brakeAux,
                         TrainCarType.LocoShunter => gameObject.GetComponent<IndicatorsShunter>().brakeAux,
@@ -116,15 +142,13 @@ namespace DvMod.AirBrake
                 foreach (var (a, b) in cars.Zip(cars.Skip(1), (a, b) => (a, b)))
                 {
                     // AirBrake.DebugLog(a, $"EqualizeBrakePipe: a={a.brakePipePressure}, b={b.brakePipePressure}");
-                    AirSystem.Equalize(
+                    AirFlow.Equalize(
                         dt,
                         ref a.brakePipePressure,
                         ref b.brakePipePressure,
                         BrakeSystemConsts.PIPE_VOLUME,
                         BrakeSystemConsts.PIPE_VOLUME,
-                        Main.settings.pipeBalanceSpeed,
-                        Main.settings.pipeBalanceSpeed
-                    );
+                        Main.settings.pipeBalanceSpeed);
                 }
             }
 
@@ -138,7 +162,7 @@ namespace DvMod.AirBrake
             private static void ApplyBrakingForce(BrakeSystem car)
             {
                 var state = ExtraBrakeState.Instance(car);
-                var cylinderBrakingFactor = Mathf.InverseLerp(Constants.CylinderThresholdPressure, Constants.MAX_CYLINDER_PRESSURE, state.cylinderPressure);
+                var cylinderBrakingFactor = Mathf.InverseLerp(Constants.CylinderThresholdPressure, Constants.FullApplicationPressure, state.cylinderPressure);
                 var mechanicalBrakingFactor = GetMechanicalBrakeFactor(car);
                 car.brakingFactor = Mathf.Max(mechanicalBrakingFactor, cylinderBrakingFactor);
             }

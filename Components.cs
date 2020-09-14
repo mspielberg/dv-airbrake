@@ -3,23 +3,26 @@ using UnityEngine;
 
 namespace DvMod.AirBrake.Components
 {
-    static public class AngleCocks
+    public static class AngleCocks
     {
-        static private void Update(BrakeSystem car, float dt)
+        private const float VentRate = 10f;
+        private static void Update(BrakeSystem car, float dt)
         {
             foreach (var cock in new HoseAndCock[] { car.Front, car.Rear })
             {
                 float rate = cock.IsOpenToAtmosphere
-                    ? AirSystem.Vent(
+                    ? AirFlow.Vent(
                         dt,
                         ref car.brakePipePressure,
-                        BrakeSystemConsts.PIPE_VOLUME) / BrakeSystemConsts.MAX_BRAKE_PIPE_PRESSURE
+                        BrakeSystemConsts.PIPE_VOLUME,
+                        VentRate)
                     : 0f;
+                // AirBrake.DebugLog(car, $"cockOpen={cock.IsOpenToAtmosphere}, ventRate={rate}");
                 cock.exhaustFlow = Mathf.SmoothDamp(cock.exhaustFlow, rate, ref cock.exhaustFlowRef, 0.1f);
             }
         }
 
-        static public void Update(Brakeset brakeset, float dt)
+        public static void Update(Brakeset brakeset, float dt)
         {
             Update(brakeset.firstCar, dt);
             if (brakeset.firstCar != brakeset.lastCar)
@@ -32,117 +35,153 @@ namespace DvMod.AirBrake.Components
         }
     }
 
-    static public class PlainTripleValve
+    public static class PlainTripleValve
     {
-        static public void Update(BrakeSystem car, float dt)
+        private const float ActivationThreshold = 0.1f;
+
+        public enum Mode
+        {
+            Charge,
+            Apply,
+            Lap,
+        }
+
+        public static void Update(BrakeSystem car, float dt)
         {
             ExtraBrakeState state = ExtraBrakeState.Instance(car);
-            if (car.brakePipePressure > state.auxReservoirPressure)
+            switch (state.tripleValveMode)
             {
-                // RELEASE
-                AirSystem.Vent(
-                    dt,
-                    ref state.cylinderPressure,
-                    Constants.BRAKE_CYLINDER_VOLUME,
-                    Main.settings.releaseSpeed);
+                case Mode.Charge:
+                    // RELEASE
+                    AirFlow.Vent(
+                        dt,
+                        ref state.cylinderPressure,
+                        Constants.BrakeCylinderVolume,
+                        Main.settings.releaseSpeed);
 
-                // CHARGE
-                AirSystem.OneWayFlow(
-                    dt,
-                    ref car.brakePipePressure,
-                    ref state.auxReservoirPressure,
-                    BrakeSystemConsts.PIPE_VOLUME,
-                    Constants.AUX_RESERVOIR_VOLUME,
-                    Main.settings.chargeSpeed);
-            }
-            else if (car.brakePipePressure < state.auxReservoirPressure - Constants.ApplicationThreshold)
-            {
-                // APPLY
-                AirSystem.Equalize(
-                    dt,
-                    ref state.auxReservoirPressure,
-                    ref state.cylinderPressure,
-                    Constants.AUX_RESERVOIR_VOLUME,
-                    Constants.BRAKE_CYLINDER_VOLUME,
-                    Main.settings.applySpeed);
-            }
-            else
-            {
-                // LAP
+                    // CHARGE
+                    AirFlow.OneWayFlow(
+                        dt,
+                        ref state.auxReservoirPressure,
+                        ref car.brakePipePressure,
+                        Constants.AUX_RESERVOIR_VOLUME,
+                        BrakeSystemConsts.PIPE_VOLUME,
+                        Main.settings.chargeSpeed);
+
+                    if (car.brakePipePressure < state.auxReservoirPressure - ActivationThreshold)
+                        state.tripleValveMode = Mode.Apply;
+                    return;
+
+                case Mode.Apply:
+                    // APPLY
+                    AirFlow.Equalize(
+                        dt,
+                        ref state.cylinderPressure,
+                        ref state.auxReservoirPressure,
+                        Constants.BrakeCylinderVolume,
+                        Constants.AUX_RESERVOIR_VOLUME,
+                        Main.settings.applySpeed);
+
+                    if (car.brakePipePressure > state.auxReservoirPressure + ActivationThreshold)
+                        state.tripleValveMode = Mode.Lap;
+                    return;
+
+                case Mode.Lap:
+                    if (car.brakePipePressure < state.auxReservoirPressure - (ActivationThreshold * 2))
+                        state.tripleValveMode = Mode.Apply;
+                    else if (car.brakePipePressure > state.auxReservoirPressure + (ActivationThreshold * 2))
+                        state.tripleValveMode = Mode.Charge;
+                    return;
             }
         }
     }
 
-    static public class BrakeValve26L {
-        static private class BrakeValve26C
+    public static class BrakeValve26L
+    {
+        private static class BrakeValve26C
         {
             private const float RechargeSpeed = 10f;
-            private static float Charge(BrakeSystem car, float dt)
+            private static float Charge(BrakeSystem car, float dt, float targetPressure)
             {
-                /* pnew = p + limit * v2
-                   limit * v2 = pnew - p
-                   limit = (pnew - p) / v2
-                 */
-                var flowLimit = (BrakeSystemConsts.MAX_BRAKE_PIPE_PRESSURE - car.brakePipePressure) / BrakeSystemConsts.RESERVOIR_VOLUME;
-                return AirSystem.OneWayFlow(
+                var massFlow = AirFlow.OneWayFlow(
                     dt,
-                    ref car.mainReservoirPressureUnsmoothed,
                     ref car.brakePipePressure,
-                    BrakeSystemConsts.RESERVOIR_VOLUME,
+                    ref car.mainReservoirPressureUnsmoothed,
                     BrakeSystemConsts.PIPE_VOLUME,
+                    BrakeSystemConsts.RESERVOIR_VOLUME,
                     RechargeSpeed,
-                    flowLimit);
+                    targetPressure - car.brakePipePressure);
+                return massFlow;
             }
 
-            private static float Vent(BrakeSystem car, float dt)
+            private static float Vent(BrakeSystem car, float dt, float targetPressure)
             {
-                return AirSystem.Vent(dt, ref car.brakePipePressure, BrakeSystemConsts.PIPE_VOLUME, Main.settings.applySpeed);
+                return AirFlow.Vent(
+                    dt,
+                    ref car.brakePipePressure,
+                    BrakeSystemConsts.PIPE_VOLUME,
+                    Main.settings.applySpeed,
+                    car.brakePipePressure - targetPressure);
             }
 
             public static (float, float) Update(BrakeSystem car, float dt)
             {
                 var targetPressure = BrakeSystemConsts.MAX_BRAKE_PIPE_PRESSURE * (1f - car.trainBrakePosition);
-                if (targetPressure > car.brakePipePressure)
-                    return (Charge(car, dt), 0f);
+                if (targetPressure > car.brakePipePressure + Constants.ApplicationThreshold)
+                    return (Charge(car, dt, targetPressure), 0f);
                 if (targetPressure < car.brakePipePressure - Constants.ApplicationThreshold)
-                    return (0f, Vent(car, dt));
+                    return (0f, Vent(car, dt, targetPressure));
                 return (0f, 0f);
             }
         }
 
         static private class BrakeValve26SA
         {
+            private const float BailoffPositionLimit = 0.1f;
             private static float Charge(BrakeSystem car, float dt, float targetPressure)
             {
-                // AirBrake.DebugLog(car, $"26SA.Charge");
                 var state = ExtraBrakeState.Instance(car);
-                var pressureRequested = targetPressure - state.cylinderPressure;
-                var flowLimit = Mathf.Min(1f, pressureRequested);
-                return AirSystem.OneWayFlow(
+                AirBrake.DebugLog(car, $"26SA.Charge before: cylinder={state.cylinderPressure}");
+                float massFlow = AirFlow.OneWayFlow(
                     dt,
-                    ref car.mainReservoirPressureUnsmoothed,
                     ref state.cylinderPressure,
+                    ref car.mainReservoirPressureUnsmoothed,
+                    Constants.BrakeCylinderVolume,
                     BrakeSystemConsts.RESERVOIR_VOLUME,
-                    Constants.BRAKE_CYLINDER_VOLUME,
                     Main.settings.applySpeed,
-                    flowLimit);
+                    targetPressure - state.cylinderPressure);
+                AirBrake.DebugLog(car, $"26SA.Charge after: cylinder={state.cylinderPressure}");
+                return massFlow;
             }
 
-            private static float Vent(BrakeSystem car, float dt)
+            private static float Vent(BrakeSystem car, float dt, float targetPressure)
             {
-                // AirBrake.DebugLog(car, $"26SA.Vent");
                 var state = ExtraBrakeState.Instance(car);
-                return AirSystem.Vent(dt, ref state.cylinderPressure, BrakeSystemConsts.PIPE_VOLUME);
+                AirBrake.DebugLog(car, $"26SA.Vent before: cylinder={state.cylinderPressure}");
+                float massFlow = AirFlow.Vent(
+                    dt,
+                    ref state.cylinderPressure,
+                    Constants.BrakeCylinderVolume,
+                    pressureChangeLimit: state.cylinderPressure - targetPressure);
+                AirBrake.DebugLog(car, $"26SA.Vent after: cylinder={state.cylinderPressure}");
+                return massFlow;
             }
 
             public static (float, float) Update(BrakeSystem car, float dt)
             {
                 var state = ExtraBrakeState.Instance(car);
-                var targetPressure = Mathf.Max(car.trainBrakePosition, car.independentBrakePosition) * Constants.MAX_CYLINDER_PRESSURE;
+                var automaticTarget = Mathf.InverseLerp(BrakeSystemConsts.MAX_BRAKE_PIPE_PRESSURE, Constants.FullApplicationPressure, car.brakePipePressure);
+                // AirBrake.DebugLog(car, $"BP={car.brakePipePressure}, maxCyl={Constants.MAX_CYLINDER_PRESSURE}, automaticTarget={automaticTarget}");
+                var independentTarget = Mathf.InverseLerp(BailoffPositionLimit * 2f, 1f, car.independentBrakePosition);
+                var targetPressure = Mathf.Max(automaticTarget, independentTarget) * Constants.FullApplicationPressure;
+
+                AirBrake.DebugLog(car, $"handle={car.independentBrakePosition}, cylinder = {state.cylinderPressure}, target = {targetPressure}");
+                if (car.independentBrakePosition < BailoffPositionLimit)
+                    return (0f, Vent(car, dt, 0f));
+                if (targetPressure < state.cylinderPressure - Constants.ApplicationThreshold)
+                    return (0f, Vent(car, dt, targetPressure));
                 if (targetPressure > state.cylinderPressure + Constants.ApplicationThreshold)
                     return (Charge(car, dt, targetPressure), 0f);
-                if (targetPressure < state.cylinderPressure)
-                    return (0f, Vent(car, dt));
                 return (0f, 0f);
             }
         }
