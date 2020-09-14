@@ -24,6 +24,11 @@ namespace DvMod.AirBrake.Components
             Update(brakeset.firstCar, dt);
             if (brakeset.firstCar != brakeset.lastCar)
                 Update(brakeset.lastCar, dt);
+            foreach (BrakeSystem car in brakeset.cars)
+            {
+                car.Front.UpdatePressurized();
+                car.Rear.UpdatePressurized();
+            }
         }
     }
 

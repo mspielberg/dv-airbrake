@@ -126,8 +126,6 @@ namespace DvMod.AirBrake
                         Main.settings.pipeBalanceSpeed
                     );
                 }
-                brakeset.firstCar.Front.UpdatePressurized();
-                brakeset.lastCar.Rear.UpdatePressurized();
             }
 
             private static float GetMechanicalBrakeFactor(BrakeSystem car)
