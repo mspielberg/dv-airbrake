@@ -79,13 +79,19 @@ namespace DvMod.AirBrake.Components
             private const float RechargeSpeed = 10f;
             private static float Charge(BrakeSystem car, float dt)
             {
+                /* pnew = p + limit * v2
+                   limit * v2 = pnew - p
+                   limit = (pnew - p) / v2
+                 */
+                var flowLimit = (BrakeSystemConsts.MAX_BRAKE_PIPE_PRESSURE - car.brakePipePressure) / BrakeSystemConsts.RESERVOIR_VOLUME;
                 return AirSystem.OneWayFlow(
                     dt,
                     ref car.mainReservoirPressureUnsmoothed,
                     ref car.brakePipePressure,
                     BrakeSystemConsts.RESERVOIR_VOLUME,
                     BrakeSystemConsts.PIPE_VOLUME,
-                    RechargeSpeed);
+                    RechargeSpeed,
+                    flowLimit);
             }
 
             private static float Vent(BrakeSystem car, float dt)
@@ -117,7 +123,7 @@ namespace DvMod.AirBrake.Components
                     ref car.mainReservoirPressureUnsmoothed,
                     ref state.cylinderPressure,
                     BrakeSystemConsts.RESERVOIR_VOLUME,
-                    car.brakeset.pipeVolume,
+                    Constants.BRAKE_CYLINDER_VOLUME,
                     Main.settings.applySpeed,
                     flowLimit);
             }
