@@ -1,4 +1,3 @@
-using DV.Simulation.Brake;
 using HarmonyLib;
 using UnityModManagerNet;
 
@@ -72,10 +71,10 @@ namespace DvMod.AirBrake
             // Default rate = 0.8 bar/s
             [Draw("Air compressor production")]
             public float compressorSpeed = Constants.MaxMainReservoirPressure / 0.8f / 300f;
-            [Draw("Brake pipe balance speed")]
-            public float pipeBalanceSpeed = 20f;
+            [Draw("Brake pipe balance speed", Min = 1, Max = 100)]
+            public int pipeBalanceSpeed = 5;
             [Draw("Brake application speed")]
-            public float applySpeed = 1f;
+            public float applySpeed = 3f;
             [Draw("Brake release speed")]
             public float releaseSpeed = 0.1f;
             [Draw("Brake recharge speed")]
@@ -83,11 +82,13 @@ namespace DvMod.AirBrake
 
             [Draw("Enable logging")] public bool enableLogging = false;
 
-            override public void Save(UnityModManager.ModEntry entry) {
+            override public void Save(UnityModManager.ModEntry entry)
+            {
                 Save<Settings>(this, entry);
             }
 
-            public void OnChange() {
+            public void OnChange()
+            {
             }
         }
     }

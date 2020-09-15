@@ -211,7 +211,7 @@ namespace DvMod.AirBrake.Components
     {
         private static class BrakeValve26C
         {
-            private const float RechargeSpeed = 1f;
+            private const float RechargeSpeed = 10f;
             private static float Charge(BrakeSystem car, float dt, float targetPressure)
             {
                 var state = ExtraBrakeState.Instance(car);
@@ -221,6 +221,7 @@ namespace DvMod.AirBrake.Components
                     ref car.mainReservoirPressureUnsmoothed,
                     BrakeSystemConsts.PIPE_VOLUME,
                     Constants.MainReservoirVolume,
+                    RechargeSpeed,
                     maxDestPressure: targetPressure);
                 return massFlow;
             }

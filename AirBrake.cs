@@ -112,147 +112,111 @@ namespace DvMod.AirBrake
 
     public static class AirBrake
     {
-        [HarmonyPatch(typeof(TrainCar), nameof(TrainCar.Awake))]
-        public static class TrainCarAwakePatch
+        private static void RechargeMainReservoir(BrakeSystem car, float dt)
         {
-            public static void Postfix(TrainCar __instance)
+            if (car.compressorRunning)
             {
-                __instance.brakeSystem.brakePipePressure = 0f;
-                __instance.brakeSystem.mainReservoirPressure = 0f;
-                __instance.brakeSystem.mainReservoirPressureUnsmoothed = 0f;
-
-                __instance.InteriorPrefabLoaded += (gameObject) =>
-                {
-                    if (gameObject == null)
-                        return;
-                    var (mainResIndicator, brakePipeIndicator) = TrainCar.Resolve(gameObject).carType switch
-                    {
-                        TrainCarType.LocoDiesel =>
-                        (
-                            gameObject.GetComponent<IndicatorsDiesel>().brakeAux,
-                            gameObject.GetComponent<IndicatorsDiesel>().brakePipe
-                        ),
-                        TrainCarType.LocoShunter =>
-                        (
-                            gameObject.GetComponent<IndicatorsShunter>().brakeAux,
-                            gameObject.GetComponent<IndicatorsShunter>().brakePipe
-                        ),
-                        TrainCarType.LocoSteamHeavy =>
-                        (
-                            gameObject.GetComponent<IndicatorsSteam>().brakeAux,
-                            gameObject.GetComponent<IndicatorsSteam>().brakePipe
-                        ),
-                        _ => default
-                    };
-                    if (mainResIndicator != null)
-                        mainResIndicator.maxValue = Constants.MaxMainReservoirPressure;
-                    if (brakePipeIndicator != null)
-                        brakePipeIndicator.maxValue = Constants.MaxBrakePipePressure;
-                };
+                var increase = car.compressorProductionRate * Main.settings.compressorSpeed * dt;
+                car.mainReservoirPressureUnsmoothed =
+                        Mathf.Clamp(car.mainReservoirPressureUnsmoothed + increase, 0f, Constants.MaxMainReservoirPressure);
             }
+            car.mainReservoirPressure = Mathf.SmoothDamp(car.mainReservoirPressure, car.mainReservoirPressureUnsmoothed, ref car.mainResPressureRef, 0.8f);
         }
 
-        [HarmonyPatch(typeof(Brakeset), nameof(Brakeset.Update))]
-        public static class BrakesetUpdatePatch
+        private static void BalanceBrakePipe(Brakeset brakeset, float dt)
         {
-            private static void RechargeMainReservoir(BrakeSystem car, float dt)
+            var cars = brakeset.cars.AsReadOnly();
+            var states = cars.Select(ExtraBrakeState.Instance).ToList();
+            var pairs = cars.Zip(cars.Skip(1), (a, b) => (a, b));
+            for (int i = 0; i < Main.settings.pipeBalanceSpeed; i++)
             {
-                if (car.compressorRunning)
-                {
-                    var increase = car.compressorProductionRate * Main.settings.compressorSpeed * dt;
-                    car.mainReservoirPressureUnsmoothed =
-                         Mathf.Clamp(car.mainReservoirPressureUnsmoothed + increase, 0f, Constants.MaxMainReservoirPressure);
-                }
-                car.mainReservoirPressure = Mathf.SmoothDamp(car.mainReservoirPressure, car.mainReservoirPressureUnsmoothed, ref car.mainResPressureRef, 0.8f);
-            }
-
-            private static void BalanceBrakePipe(Brakeset brakeset, float dt)
-            {
-                var cars = brakeset.cars.AsReadOnly();
-                foreach (var (a, b) in cars.Zip(cars.Skip(1), (a, b) => (a, b)))
+                for (int j = 0; j < states.Count - 1; j++)
                 {
                     // AirBrake.DebugLog(a, $"EqualizeBrakePipe: a={a.brakePipePressure}, b={b.brakePipePressure}");
-                    var stateA = ExtraBrakeState.Instance(a);
-                    var stateB = ExtraBrakeState.Instance(b);
+                    var stateA = states[j];
+                    var stateB = states[j + 1];
                     AirFlow.Equalize(
                         dt,
                         ref stateA.brakePipePressureUnsmoothed,
                         ref stateB.brakePipePressureUnsmoothed,
                         BrakeSystemConsts.PIPE_VOLUME,
                         BrakeSystemConsts.PIPE_VOLUME,
-                        Main.settings.pipeBalanceSpeed);
+                        float.PositiveInfinity);
                 }
             }
+        }
 
-            private static float GetMechanicalBrakeFactor(BrakeSystem car)
-            {
-                if (car.hasIndependentBrake && !car.hasCompressor) // Caboose only
-                    return car.independentBrakePosition;
-                return 0f;
-            }
+        private static float GetMechanicalBrakeFactor(BrakeSystem car)
+        {
+            if (car.hasIndependentBrake && !car.hasCompressor) // Caboose only
+                return car.independentBrakePosition;
+            return 0f;
+        }
 
-            private static void ApplyBrakingForce(BrakeSystem car)
-            {
-                var state = ExtraBrakeState.Instance(car);
-                var cylinderBrakingFactor = Mathf.InverseLerp(Constants.CylinderThresholdPressure, Constants.FullApplicationPressure, state.cylinderPressure);
-                var mechanicalBrakingFactor = GetMechanicalBrakeFactor(car);
-                car.brakingFactor = Mathf.Max(mechanicalBrakingFactor, cylinderBrakingFactor);
-            }
+        private static void ApplyBrakingForce(BrakeSystem car)
+        {
+            var state = ExtraBrakeState.Instance(car);
+            var cylinderBrakingFactor = Mathf.InverseLerp(Constants.CylinderThresholdPressure, Constants.FullApplicationPressure, state.cylinderPressure);
+            var mechanicalBrakingFactor = GetMechanicalBrakeFactor(car);
+            car.brakingFactor = Mathf.Max(mechanicalBrakingFactor, cylinderBrakingFactor);
+        }
 
-            private static void UpdateBrakePipeGauge(BrakeSystem car)
-            {
-                car.brakePipePressure = Mathf.SmoothDamp(
-                    car.brakePipePressure,
-                    ExtraBrakeState.Instance(car).brakePipePressureUnsmoothed,
-                    ref car.brakePipePressureRef, 0.2f);
-            }
+        private static void UpdateBrakePipeGauge(BrakeSystem car)
+        {
+            car.brakePipePressure = Mathf.SmoothDamp(
+                car.brakePipePressure,
+                ExtraBrakeState.Instance(car).brakePipePressureUnsmoothed,
+                ref car.brakePipePressureRef, 0.2f);
+        }
 
-            private static void UpdateHUD(BrakeSystem car)
-            {
-                var state = ExtraBrakeState.Instance(car);
-                HeadsUpDisplayBridge.instance?.UpdateAuxReservoirPressure(car.GetTrainCar(), state.auxReservoirPressure);
-                HeadsUpDisplayBridge.instance?.UpdateBrakeCylinderPressure(car.GetTrainCar(), state.cylinderPressure);
-                HeadsUpDisplayBridge.instance?.UpdateEqualizingReservoirPressure(car.GetTrainCar(), state.equalizingReservoirPressure);
-            }
+        private static void UpdateHUD(BrakeSystem car)
+        {
+            var state = ExtraBrakeState.Instance(car);
+            HeadsUpDisplayBridge.instance?.UpdateAuxReservoirPressure(car.GetTrainCar(), state.auxReservoirPressure);
+            HeadsUpDisplayBridge.instance?.UpdateBrakeCylinderPressure(car.GetTrainCar(), state.cylinderPressure);
+            HeadsUpDisplayBridge.instance?.UpdateEqualizingReservoirPressure(car.GetTrainCar(), state.equalizingReservoirPressure);
+        }
 
-            private static void Update(Brakeset brakeset, float dt)
+        public static void Update(Brakeset brakeset, float dt)
+        {
+            AngleCocks.Update(brakeset, dt);
+            BalanceBrakePipe(brakeset, dt);
+            foreach (var car in brakeset.cars)
             {
-                AngleCocks.Update(brakeset, dt);
-                BalanceBrakePipe(brakeset, dt);
-                foreach (var car in brakeset.cars)
+                if (car.hasCompressor)
                 {
-                    if (car.hasCompressor)
-                    {
-                        RechargeMainReservoir(car, dt);
+                    RechargeMainReservoir(car, dt);
 
-                        var selfLap = car.GetTrainCar().carType switch
-                        {
-                            TrainCarType.LocoShunter => Main.settings.shunterSelfLap,
-                            TrainCarType.LocoSteamHeavy => Main.settings.steamHeavySelfLap,
-                            TrainCarType.LocoDiesel => Main.settings.dieselSelfLap,
-                            _ => true,
-                        };
-                        if (selfLap)
-                            BrakeValve26L.Update(car, dt);
-                        else
-                            BrakeValve6ET.Update(car, dt);
-                    }
+                    var selfLap = car.GetTrainCar().carType switch
+                    {
+                        TrainCarType.LocoShunter => Main.settings.shunterSelfLap,
+                        TrainCarType.LocoSteamHeavy => Main.settings.steamHeavySelfLap,
+                        TrainCarType.LocoDiesel => Main.settings.dieselSelfLap,
+                        _ => true,
+                    };
+                    if (selfLap)
+                        BrakeValve26L.Update(car, dt);
                     else
-                    {
-                        PlainTripleValve.Update(car, dt);
-                    }
-                    ApplyBrakingForce(car);
-                    UpdateBrakePipeGauge(car);
-                    UpdateHUD(car);
+                        BrakeValve6ET.Update(car, dt);
                 }
+                else
+                {
+                    PlainTripleValve.Update(car, dt);
+                }
+                ApplyBrakingForce(car);
+                UpdateBrakePipeGauge(car);
+                UpdateHUD(car);
             }
+        }
 
-            public static bool Prefix(float dt)
+        [HarmonyPatch(typeof(Brakeset), nameof(Brakeset.Update))]
+        public static class BrakesetUpdatePatch
+        {
+            public static bool Prefix()
             {
                 if (!Main.enabled)
                     return true;
-                foreach (var brakeset in Brakeset.allSets)
-                    Update(brakeset, dt);
+                Updater.Setup();
                 return false;
             }
         }
@@ -261,6 +225,26 @@ namespace DvMod.AirBrake
         {
             if (PlayerManager.Car?.brakeSystem == car)
                 Main.DebugLog(msg);
+        }
+    }
+
+    public class Updater : MonoBehaviour
+    {
+        private static GameObject? rootObject;
+
+        public static void Setup()
+        {
+            if (rootObject == null)
+            {
+                rootObject = new GameObject();
+                rootObject.AddComponent<Updater>();
+            }
+        }
+
+        public void FixedUpdate()
+        {
+            foreach (var brakeset in Brakeset.allSets)
+                AirBrake.Update(brakeset, Time.fixedDeltaTime);
         }
     }
 }
