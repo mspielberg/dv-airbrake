@@ -4,6 +4,7 @@ using HarmonyLib;
 using System.Linq;
 using UnityEngine;
 using UnityEngine.Assertions;
+using UnityModManagerNet;
 
 namespace DvMod.AirBrake
 {
@@ -12,10 +13,11 @@ namespace DvMod.AirBrake
         public const float AtmosphereVolume = 1e6f;
         public const float ApplicationThreshold = 0.01f;
 
+        public const float MainReservoirVolume = 20f * AuxReservoirVolume;
+        public const float AuxReservoirVolume = 2.5f;
         public const float BrakeCylinderVolume = 1f;
-        public const float AUX_RESERVOIR_VOLUME = 2.5f;
         public const float FullApplicationPressure =
-            BrakeSystemConsts.MAX_BRAKE_PIPE_PRESSURE * AUX_RESERVOIR_VOLUME / (AUX_RESERVOIR_VOLUME + BrakeCylinderVolume);
+            BrakeSystemConsts.MAX_BRAKE_PIPE_PRESSURE * AuxReservoirVolume / (AuxReservoirVolume + BrakeCylinderVolume);
 
         public const float MaxMainReservoirPressure = 8f;
         public const float CylinderThresholdPressure = 0.5f;
@@ -24,6 +26,11 @@ namespace DvMod.AirBrake
     internal class ExtraBrakeState
     {
         public float cylinderPressure;
+
+        // Part of H6 automatic brake valve
+        public float equalizingReservoirPressure;
+
+        // Type C 10" combined car equipment
         public float auxReservoirPressure;
         public PlainTripleValve.Mode tripleValveMode;
 
@@ -62,11 +69,9 @@ namespace DvMod.AirBrake
             return massTransfer;
         }
 
-        public static float TransferPressure(ref float destPressure, ref float srcPressure, float destVolume, float srcVolume, float pressureChangeLimit)
-            => TransferMass(ref destPressure, ref srcPressure, destVolume, srcVolume, pressureChangeLimit * destVolume);
-
         public static float Equalize(float dt, ref float p1, ref float p2, float v1, float v2, float rateMultiplier, float pressureChangeLimit = float.PositiveInfinity)
         {
+            Assert.IsTrue(pressureChangeLimit >= 0f);
             if (p1 > p2)
                 return Equalize(dt, ref p2, ref p1, v2, v1, rateMultiplier, pressureChangeLimit);
 
@@ -79,17 +84,28 @@ namespace DvMod.AirBrake
         }
 
         public static float OneWayFlow(float dt, ref float destPressure, ref float srcPressure, float destVolume,
-            float srcVolume, float multiplier = 1f, float pressureChangeLimit = float.PositiveInfinity)
+            float srcVolume, float multiplier = 1f, float maxDestPressure = float.PositiveInfinity)
         {
             return srcPressure <= destPressure ? 0f
-                : Equalize(dt, ref destPressure, ref srcPressure, destVolume, srcVolume, multiplier, pressureChangeLimit);
+                : Equalize(dt, ref destPressure, ref srcPressure, destVolume, srcVolume, multiplier, maxDestPressure - destPressure);
         }
 
-        public static float Vent(float dt, ref float pressure, float volume, float multiplier = 1f, float pressureChangeLimit = float.PositiveInfinity)
+        public static float Vent(float dt, ref float pressure, float volume, float multiplier = 1f, float minPressure = 0f)
         {
             float atmosphere = 0f;
-            // Main.DebugLog($"AirBrake.Vent: P={pressure}, V={volume}");
-            return OneWayFlow(dt, ref atmosphere, ref pressure, Constants.AtmosphereVolume, volume, multiplier, pressureChangeLimit);
+            // Main.DebugLog($"AirBrake.Vent: P={pressure}, V={volume}, minP={minPressure}");
+            return pressure <= minPressure ? 0f
+                : Equalize(dt, ref atmosphere, ref pressure, Constants.AtmosphereVolume, volume, multiplier, pressure - minPressure);
+        }
+
+        public static float VentPressure(float dt, ref float pressure, float volume, float pressureRate)
+        {
+            float atmosphere = 0f;
+            // var pressureBefore = pressure;
+            var massTransfer = TransferMass(ref atmosphere, ref pressure, Constants.AtmosphereVolume, volume, pressureRate * volume * dt);
+            // var pressureAfter = pressure;
+            // Main.DebugLog($"VentPressure: requestedRate={pressureRate};deltaP={pressureAfter-pressureBefore};actualRate={(pressureAfter-pressureBefore)/dt}");
+            return massTransfer;
         }
     }
 
@@ -136,7 +152,7 @@ namespace DvMod.AirBrake
                 car.mainReservoirPressure = Mathf.SmoothDamp(car.mainReservoirPressure, car.mainReservoirPressureUnsmoothed, ref car.mainResPressureRef, 0.8f);
             }
 
-            private static void EqualizeBrakePipe(Brakeset brakeset, float dt)
+            private static void BalanceBrakePipe(Brakeset brakeset, float dt)
             {
                 var cars = brakeset.cars.AsReadOnly();
                 foreach (var (a, b) in cars.Zip(cars.Skip(1), (a, b) => (a, b)))
@@ -172,18 +188,27 @@ namespace DvMod.AirBrake
                 var state = ExtraBrakeState.Instance(car);
                 HeadsUpDisplayBridge.instance?.UpdateAuxReservoirPressure(car.GetTrainCar(), state.auxReservoirPressure);
                 HeadsUpDisplayBridge.instance?.UpdateBrakeCylinderPressure(car.GetTrainCar(), state.cylinderPressure);
+                HeadsUpDisplayBridge.instance?.UpdateEqualizingReservoirPressure(car.GetTrainCar(), state.equalizingReservoirPressure);
             }
 
             private static void Update(Brakeset brakeset, float dt)
             {
                 AngleCocks.Update(brakeset, dt);
-                EqualizeBrakePipe(brakeset, dt);
+                BalanceBrakePipe(brakeset, dt);
                 foreach (var car in brakeset.cars)
                 {
                     if (car.hasCompressor)
                     {
                         RechargeMainReservoir(car, dt);
-                        BrakeValve26L.Update(car, dt);
+                        switch (car.GetTrainCar().carType)
+                        {
+                            case TrainCarType.LocoDiesel:
+                                BrakeValve26L.Update(car, dt);
+                                break;
+                            default:
+                                BrakeValve6ET.Update(car, dt);
+                                break;
+                        }
                     }
                     else
                     {

@@ -61,11 +61,18 @@ namespace DvMod.AirBrake
 
         public class Settings : UnityModManager.ModSettings, IDrawable
         {
-            [Draw("Air compressor production")] public float compressorSpeed = 0.5f;
-            [Draw("Brake pipe balance speed")] public float pipeBalanceSpeed = 10f;
-            [Draw("Brake application speed")] public float applySpeed = 1f;
-            [Draw("Brake release speed")] public float releaseSpeed = 0.1f;
-            [Draw("Brake recharge speed")] public float chargeSpeed = 0.25f;
+            // Reference: ~5 minutes to charge a main reservoir from empty
+            // Default rate = 0.8 bar/s
+            [Draw("Air compressor production")]
+            public float compressorSpeed = Constants.MaxMainReservoirPressure / 0.8f / 300f;
+            [Draw("Brake pipe balance speed")]
+            public float pipeBalanceSpeed = 20f;
+            [Draw("Brake application speed")]
+            public float applySpeed = 1f;
+            [Draw("Brake release speed")]
+            public float releaseSpeed = 0.1f;
+            [Draw("Brake recharge speed")]
+            public float chargeSpeed = 0.25f;
 
             [Draw("Enable logging")] public bool enableLogging = false;
 

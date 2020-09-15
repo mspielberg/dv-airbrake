@@ -29,6 +29,10 @@ namespace DvMod.AirBrake
             PushProvider brakeCylinderPressureProvider = new PushProvider(
                 "Brake cylinder pressure", () => true, v => v.ToString("F2"));
             Registry.Register(RegistryKeys.AllCars, brakeCylinderPressureProvider);
+
+            PushProvider equalizationReservoirPressureProvider = new PushProvider(
+                "Equalizing reservoir pressure", () => true, v => v.ToString("F2"));
+            Registry.Register(TrainCarType.LocoShunter, equalizationReservoirPressureProvider);
         }
 
         public void UpdateAuxReservoirPressure(TrainCar car, float pressure)
@@ -41,6 +45,12 @@ namespace DvMod.AirBrake
         {
             if (Registry.GetProvider(TrainCarType.NotSet, "Brake cylinder pressure") is PushProvider pp)
                 pp.MixSmoothedValue(car, brakeCylinderPressure);
+        }
+
+        public void UpdateEqualizingReservoirPressure(TrainCar car, float equalizingReservoirPressure)
+        {
+            if (Registry.GetProvider(car.carType, "Equalizing reservoir pressure") is PushProvider pp)
+                pp.MixSmoothedValue(car, equalizingReservoirPressure);
         }
     }
 }
