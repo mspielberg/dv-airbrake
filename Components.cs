@@ -8,12 +8,13 @@ namespace DvMod.AirBrake.Components
         private const float VentRate = 10f;
         private static void Update(BrakeSystem car, float dt)
         {
+            var state = ExtraBrakeState.Instance(car);
             foreach (var cock in new HoseAndCock[] { car.Front, car.Rear })
             {
                 float rate = cock.IsOpenToAtmosphere
                     ? AirFlow.Vent(
                         dt,
-                        ref car.brakePipePressure,
+                        ref state.brakePipePressureUnsmoothed,
                         BrakeSystemConsts.PIPE_VOLUME,
                         VentRate)
                     : 0f;
@@ -63,12 +64,12 @@ namespace DvMod.AirBrake.Components
                     AirFlow.OneWayFlow(
                         dt,
                         ref state.auxReservoirPressure,
-                        ref car.brakePipePressure,
+                        ref state.brakePipePressureUnsmoothed,
                         Constants.AuxReservoirVolume,
                         BrakeSystemConsts.PIPE_VOLUME,
                         Main.settings.chargeSpeed);
 
-                    if (car.brakePipePressure < state.auxReservoirPressure - ActivationThreshold)
+                    if (state.brakePipePressureUnsmoothed < state.auxReservoirPressure - ActivationThreshold)
                         state.tripleValveMode = Mode.Apply;
                     return;
 
@@ -82,14 +83,14 @@ namespace DvMod.AirBrake.Components
                         Constants.AuxReservoirVolume,
                         Main.settings.applySpeed);
 
-                    if (car.brakePipePressure > state.auxReservoirPressure + ActivationThreshold)
+                    if (state.brakePipePressureUnsmoothed > state.auxReservoirPressure + ActivationThreshold)
                         state.tripleValveMode = Mode.Lap;
                     return;
 
                 case Mode.Lap:
-                    if (car.brakePipePressure < state.auxReservoirPressure - (ActivationThreshold * 2))
+                    if (state.brakePipePressureUnsmoothed < state.auxReservoirPressure - (ActivationThreshold * 2))
                         state.tripleValveMode = Mode.Apply;
-                    else if (car.brakePipePressure > state.auxReservoirPressure + (ActivationThreshold * 2))
+                    else if (state.brakePipePressureUnsmoothed > state.auxReservoirPressure + (ActivationThreshold * 2))
                         state.tripleValveMode = Mode.Charge;
                     return;
             }
@@ -113,7 +114,7 @@ namespace DvMod.AirBrake.Components
                 // AirBrake.DebugLog(car, $"Calling AirFlow.Vent with P={car.brakePipePressure}, minP={state.equalizingReservoirPressure}");
                 return AirFlow.Vent(
                     dt,
-                    ref car.brakePipePressure,
+                    ref state.brakePipePressureUnsmoothed,
                     BrakeSystemConsts.PIPE_VOLUME,
                     minPressure: state.equalizingReservoirPressure);
             }
@@ -124,7 +125,7 @@ namespace DvMod.AirBrake.Components
                 var state = ExtraBrakeState.Instance(car);
                 var massFlow = AirFlow.OneWayFlow(
                     dt,
-                    ref car.brakePipePressure,
+                    ref state.brakePipePressureUnsmoothed,
                     ref car.mainReservoirPressureUnsmoothed,
                     BrakeSystemConsts.PIPE_VOLUME,
                     Constants.MainReservoirVolume,
@@ -154,10 +155,11 @@ namespace DvMod.AirBrake.Components
 
             private static float EmergencyVent(BrakeSystem car, float dt)
             {
+                var state = ExtraBrakeState.Instance(car);
                 // AirBrake.DebugLog(car, $"BrakeValveH6.EmergencyVent");
                 return AirFlow.Vent(
                     dt,
-                    ref car.brakePipePressure,
+                    ref state.brakePipePressureUnsmoothed,
                     BrakeSystemConsts.PIPE_VOLUME);
             }
 
@@ -209,25 +211,26 @@ namespace DvMod.AirBrake.Components
     {
         private static class BrakeValve26C
         {
-            private const float RechargeSpeed = 10f;
+            private const float RechargeSpeed = 1f;
             private static float Charge(BrakeSystem car, float dt, float targetPressure)
             {
+                var state = ExtraBrakeState.Instance(car);
                 var massFlow = AirFlow.OneWayFlow(
                     dt,
-                    ref car.brakePipePressure,
+                    ref state.brakePipePressureUnsmoothed,
                     ref car.mainReservoirPressureUnsmoothed,
                     BrakeSystemConsts.PIPE_VOLUME,
                     Constants.MainReservoirVolume,
-                    RechargeSpeed,
-                    targetPressure);
+                    maxDestPressure: targetPressure);
                 return massFlow;
             }
 
             private static float Vent(BrakeSystem car, float dt, float targetPressure)
             {
+                var state = ExtraBrakeState.Instance(car);
                 return AirFlow.Vent(
                     dt,
-                    ref car.brakePipePressure,
+                    ref state.brakePipePressureUnsmoothed,
                     BrakeSystemConsts.PIPE_VOLUME,
                     Main.settings.applySpeed,
                     minPressure: targetPressure);
@@ -235,10 +238,11 @@ namespace DvMod.AirBrake.Components
 
             public static (float, float) Update(BrakeSystem car, float dt)
             {
+                var state = ExtraBrakeState.Instance(car);
                 var targetPressure = Constants.MaxBrakePipePressure * (1f - car.trainBrakePosition);
-                if (targetPressure > car.brakePipePressure + Constants.ApplicationThreshold)
+                if (targetPressure > state.brakePipePressureUnsmoothed + Constants.ApplicationThreshold)
                     return (Charge(car, dt, targetPressure), 0f);
-                if (targetPressure < car.brakePipePressure - Constants.ApplicationThreshold)
+                if (targetPressure < state.brakePipePressureUnsmoothed - Constants.ApplicationThreshold)
                     return (0f, Vent(car, dt, targetPressure));
                 return (0f, 0f);
             }

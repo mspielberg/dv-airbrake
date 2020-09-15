@@ -25,6 +25,7 @@ namespace DvMod.AirBrake
 
     internal class ExtraBrakeState
     {
+        public float brakePipePressureUnsmoothed;
         public float cylinderPressure;
 
         // Part of H6 automatic brake valve
@@ -171,10 +172,12 @@ namespace DvMod.AirBrake
                 foreach (var (a, b) in cars.Zip(cars.Skip(1), (a, b) => (a, b)))
                 {
                     // AirBrake.DebugLog(a, $"EqualizeBrakePipe: a={a.brakePipePressure}, b={b.brakePipePressure}");
+                    var stateA = ExtraBrakeState.Instance(a);
+                    var stateB = ExtraBrakeState.Instance(b);
                     AirFlow.Equalize(
                         dt,
-                        ref a.brakePipePressure,
-                        ref b.brakePipePressure,
+                        ref stateA.brakePipePressureUnsmoothed,
+                        ref stateB.brakePipePressureUnsmoothed,
                         BrakeSystemConsts.PIPE_VOLUME,
                         BrakeSystemConsts.PIPE_VOLUME,
                         Main.settings.pipeBalanceSpeed);
@@ -194,6 +197,14 @@ namespace DvMod.AirBrake
                 var cylinderBrakingFactor = Mathf.InverseLerp(Constants.CylinderThresholdPressure, Constants.FullApplicationPressure, state.cylinderPressure);
                 var mechanicalBrakingFactor = GetMechanicalBrakeFactor(car);
                 car.brakingFactor = Mathf.Max(mechanicalBrakingFactor, cylinderBrakingFactor);
+            }
+
+            private static void UpdateBrakePipeGauge(BrakeSystem car)
+            {
+                car.brakePipePressure = Mathf.SmoothDamp(
+                    car.brakePipePressure,
+                    ExtraBrakeState.Instance(car).brakePipePressureUnsmoothed,
+                    ref car.brakePipePressureRef, 0.2f);
             }
 
             private static void UpdateHUD(BrakeSystem car)
@@ -231,6 +242,7 @@ namespace DvMod.AirBrake
                         PlainTripleValve.Update(car, dt);
                     }
                     ApplyBrakingForce(car);
+                    UpdateBrakePipeGauge(car);
                     UpdateHUD(car);
                 }
             }
