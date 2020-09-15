@@ -38,7 +38,7 @@ namespace DvMod.AirBrake.Components
 
     public static class PlainTripleValve
     {
-        private const float ActivationThreshold = 0.1f;
+        private const float ActivationThreshold = 0.05f;
 
         public enum Mode
         {
