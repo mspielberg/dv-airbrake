@@ -1,4 +1,6 @@
 using DvMod.HeadsUpDisplay;
+using System;
+using System.Linq;
 using UnityModManagerNet;
 
 namespace DvMod.AirBrake
@@ -25,14 +27,17 @@ namespace DvMod.AirBrake
         {
             PushProvider auxReservoirPressureProvider = new PushProvider(
                 "Aux reservoir pressure", () => true, v => v.ToString("F2"));
-            Registry.Register(RegistryKeys.AllCars, auxReservoirPressureProvider);
+            foreach (var nonLocoType in Enum.GetValues(typeof(TrainCarType)).OfType<TrainCarType>().Where(t => !CarTypes.IsLocomotive(t)))
+                Registry.Register(nonLocoType, auxReservoirPressureProvider);
+
             PushProvider brakeCylinderPressureProvider = new PushProvider(
                 "Brake cylinder pressure", () => true, v => v.ToString("F2"));
             Registry.Register(RegistryKeys.AllCars, brakeCylinderPressureProvider);
 
             PushProvider equalizationReservoirPressureProvider = new PushProvider(
                 "Equalizing reservoir pressure", () => true, v => v.ToString("F2"));
-            Registry.Register(TrainCarType.LocoShunter, equalizationReservoirPressureProvider);
+            foreach (var locoType in CarTypes.locomotivesMap)
+                Registry.Register(locoType, equalizationReservoirPressureProvider);
         }
 
         public void UpdateAuxReservoirPressure(TrainCar car, float pressure)

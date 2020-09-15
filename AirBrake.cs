@@ -200,15 +200,18 @@ namespace DvMod.AirBrake
                     if (car.hasCompressor)
                     {
                         RechargeMainReservoir(car, dt);
-                        switch (car.GetTrainCar().carType)
+
+                        var selfLap = car.GetTrainCar().carType switch
                         {
-                            case TrainCarType.LocoDiesel:
-                                BrakeValve26L.Update(car, dt);
-                                break;
-                            default:
-                                BrakeValve6ET.Update(car, dt);
-                                break;
-                        }
+                            TrainCarType.LocoShunter => Main.settings.shunterSelfLap,
+                            TrainCarType.LocoSteamHeavy => Main.settings.steamHeavySelfLap,
+                            TrainCarType.LocoDiesel => Main.settings.dieselSelfLap,
+                            _ => true,
+                        };
+                        if (selfLap)
+                            BrakeValve26L.Update(car, dt);
+                        else
+                            BrakeValve6ET.Update(car, dt);
                     }
                     else
                     {

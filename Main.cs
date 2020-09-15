@@ -61,6 +61,13 @@ namespace DvMod.AirBrake
 
         public class Settings : UnityModManager.ModSettings, IDrawable
         {
+            [Draw("Enable self-lapping on DE2")]
+            public bool shunterSelfLap = false;
+            [Draw("Enable self-lapping on SH282")]
+            public bool steamHeavySelfLap = false;
+            [Draw("Enable self-lapping on DE6")]
+            public bool dieselSelfLap = true;
+
             // Reference: ~5 minutes to charge a main reservoir from empty
             // Default rate = 0.8 bar/s
             [Draw("Air compressor production")]
