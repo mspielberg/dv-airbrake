@@ -129,7 +129,7 @@ namespace DvMod.AirBrake.Components
                     BrakeSystemConsts.PIPE_VOLUME,
                     Constants.MainReservoirVolume,
                     RechargeRate,
-                    BrakeSystemConsts.MAX_BRAKE_PIPE_PRESSURE);
+                    Constants.MaxBrakePipePressure);
                 massFlow += AirFlow.OneWayFlow(
                     dt,
                     ref state.equalizingReservoirPressure,
@@ -137,7 +137,7 @@ namespace DvMod.AirBrake.Components
                     BrakeSystemConsts.PIPE_VOLUME,
                     Constants.MainReservoirVolume,
                     RechargeRate,
-                    BrakeSystemConsts.MAX_BRAKE_PIPE_PRESSURE);
+                    Constants.MaxBrakePipePressure);
                 return massFlow;
             }
 
@@ -235,7 +235,7 @@ namespace DvMod.AirBrake.Components
 
             public static (float, float) Update(BrakeSystem car, float dt)
             {
-                var targetPressure = BrakeSystemConsts.MAX_BRAKE_PIPE_PRESSURE * (1f - car.trainBrakePosition);
+                var targetPressure = Constants.MaxBrakePipePressure * (1f - car.trainBrakePosition);
                 if (targetPressure > car.brakePipePressure + Constants.ApplicationThreshold)
                     return (Charge(car, dt, targetPressure), 0f);
                 if (targetPressure < car.brakePipePressure - Constants.ApplicationThreshold)
@@ -279,7 +279,7 @@ namespace DvMod.AirBrake.Components
             public static (float, float) Update(BrakeSystem car, float dt)
             {
                 var state = ExtraBrakeState.Instance(car);
-                var automaticTarget = Mathf.InverseLerp(BrakeSystemConsts.MAX_BRAKE_PIPE_PRESSURE, Constants.FullApplicationPressure, car.brakePipePressure);
+                var automaticTarget = Mathf.InverseLerp(Constants.MaxBrakePipePressure, Constants.FullApplicationPressure, car.brakePipePressure);
                 // AirBrake.DebugLog(car, $"BP={car.brakePipePressure}, maxCyl={Constants.FullApplicationPressure}, automaticTarget={automaticTarget}");
                 var independentTarget = Mathf.InverseLerp(BailoffPositionLimit * 2f, 1f, car.independentBrakePosition);
                 var targetPressure = Mathf.Max(automaticTarget, independentTarget) * Constants.FullApplicationPressure;

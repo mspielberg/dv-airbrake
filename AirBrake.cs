@@ -4,7 +4,6 @@ using HarmonyLib;
 using System.Linq;
 using UnityEngine;
 using UnityEngine.Assertions;
-using UnityModManagerNet;
 
 namespace DvMod.AirBrake
 {
@@ -13,14 +12,15 @@ namespace DvMod.AirBrake
         public const float AtmosphereVolume = 1e6f;
         public const float ApplicationThreshold = 0.01f;
 
-        public const float MainReservoirVolume = 20f * AuxReservoirVolume;
-        public const float AuxReservoirVolume = 2.5f;
-        public const float BrakeCylinderVolume = 1f;
-        public const float FullApplicationPressure =
-            BrakeSystemConsts.MAX_BRAKE_PIPE_PRESSURE * AuxReservoirVolume / (AuxReservoirVolume + BrakeCylinderVolume);
-
         public const float MaxMainReservoirPressure = 8f;
+        public const float MaxBrakePipePressure = 5f;
         public const float CylinderThresholdPressure = 0.5f;
+
+        public const float MainReservoirVolume = 20f * AuxReservoirVolume;
+        public const float AuxReservoirVolume = 45f;
+        public const float BrakeCylinderVolume = AuxReservoirVolume / 2.5f;
+        public const float FullApplicationPressure =
+            MaxBrakePipePressure * AuxReservoirVolume / (AuxReservoirVolume + BrakeCylinderVolume);
     }
 
     internal class ExtraBrakeState
@@ -124,16 +124,29 @@ namespace DvMod.AirBrake
                 {
                     if (gameObject == null)
                         return;
-                    var mainResIndicator = TrainCar.Resolve(gameObject).carType switch
+                    var (mainResIndicator, brakePipeIndicator) = TrainCar.Resolve(gameObject).carType switch
                     {
-                        TrainCarType.LocoDiesel => gameObject.GetComponent<IndicatorsDiesel>().brakeAux,
-                        TrainCarType.LocoShunter => gameObject.GetComponent<IndicatorsShunter>().brakeAux,
-                        TrainCarType.LocoSteamHeavy => gameObject.GetComponent<IndicatorsSteam>().brakeAux,
+                        TrainCarType.LocoDiesel =>
+                        (
+                            gameObject.GetComponent<IndicatorsDiesel>().brakeAux,
+                            gameObject.GetComponent<IndicatorsDiesel>().brakePipe
+                        ),
+                        TrainCarType.LocoShunter =>
+                        (
+                            gameObject.GetComponent<IndicatorsShunter>().brakeAux,
+                            gameObject.GetComponent<IndicatorsShunter>().brakePipe
+                        ),
+                        TrainCarType.LocoSteamHeavy =>
+                        (
+                            gameObject.GetComponent<IndicatorsSteam>().brakeAux,
+                            gameObject.GetComponent<IndicatorsSteam>().brakePipe
+                        ),
                         _ => default
                     };
-                    if (mainResIndicator == null)
-                        return;
-                    mainResIndicator.maxValue = Constants.MaxMainReservoirPressure;
+                    if (mainResIndicator != null)
+                        mainResIndicator.maxValue = Constants.MaxMainReservoirPressure;
+                    if (brakePipeIndicator != null)
+                        brakePipeIndicator.maxValue = Constants.MaxBrakePipePressure;
                 };
             }
         }
