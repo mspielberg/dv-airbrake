@@ -137,13 +137,8 @@ namespace DvMod.AirBrake
                     // AirBrake.DebugLog(a, $"EqualizeBrakePipe: a={a.brakePipePressure}, b={b.brakePipePressure}");
                     var stateA = states[j];
                     var stateB = states[j + 1];
-                    AirFlow.Equalize(
-                        dt,
-                        ref stateA.brakePipePressureUnsmoothed,
-                        ref stateB.brakePipePressureUnsmoothed,
-                        BrakeSystemConsts.PIPE_VOLUME,
-                        BrakeSystemConsts.PIPE_VOLUME,
-                        float.PositiveInfinity);
+                    var mean = (stateA.brakePipePressureUnsmoothed + stateB.brakePipePressureUnsmoothed) / 2f;
+                    stateA.brakePipePressureUnsmoothed = stateB.brakePipePressureUnsmoothed = mean;
                 }
             }
         }
