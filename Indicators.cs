@@ -67,14 +67,14 @@ namespace DvMod.AirBrake
             };
             if (mainResIndicator != null)
             {
-                mainResIndicator.maxValue = Constants.MaxMainReservoirPressure;
+                mainResIndicator.maxValue = Constants.PressureGaugeMax;
                 var equalizationReservoirIndicator = Object.Instantiate(mainResIndicator, mainResIndicator.transform.parent);
                 equalizationReservoirIndicator.name = EqualizingReservoirPressure;
                 ChangeToRedNeedle(mainResIndicator);
             }
             if (brakePipeIndicator != null)
             {
-                brakePipeIndicator.maxValue = Constants.MaxBrakePipePressure;
+                brakePipeIndicator.maxValue = Constants.PressureGaugeMax;
                 var brakeCylinderIndicator = Object.Instantiate(brakePipeIndicator, brakePipeIndicator.transform.parent);
                 brakeCylinderIndicator.name = BrakeCylinderPressure;
                 ChangeToRedNeedle(brakeCylinderIndicator);
@@ -185,7 +185,7 @@ namespace DvMod.AirBrake
                 var indicators = extraIndicators[__instance];
                 indicators.brakeCylinder.value = state.cylinderPressure;
                 indicators.equalizingReservoir.value = state.equalizingReservoirPressure;
-                Main.DebugLog($"{car.ID}: cylinder={state.cylinderPressure}, EQ={state.equalizingReservoirPressure}");
+                // Main.DebugLog($"{car.ID}: cylinder={state.cylinderPressure}, EQ={state.equalizingReservoirPressure}");
             }
         }
     }

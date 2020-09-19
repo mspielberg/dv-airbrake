@@ -21,6 +21,8 @@ namespace DvMod.AirBrake
         public const float BrakeCylinderVolume = AuxReservoirVolume / 2.5f;
         public const float FullApplicationPressure =
             MaxBrakePipePressure * AuxReservoirVolume / (AuxReservoirVolume + BrakeCylinderVolume);
+
+        public const float PressureGaugeMax = 10f;
     }
 
     internal class ExtraBrakeState
