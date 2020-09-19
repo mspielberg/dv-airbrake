@@ -71,13 +71,15 @@ namespace DvMod.AirBrake
             // Default rate = 0.8 bar/s
             [Draw("Air compressor production")]
             public float compressorSpeed = Constants.MaxMainReservoirPressure / 0.8f / 300f;
-            [Draw("Brake pipe balance speed", Min = 1, Max = 100)]
+            [Draw("Locomotive brake release speed")]
+            public float locoReleaseSpeed = 2f;
+            [Draw("Train brake pipe balance speed", Min = 1, Max = 100)]
             public int pipeBalanceSpeed = 5;
-            [Draw("Brake application speed")]
+            [Draw("Car brake application speed")]
             public float applySpeed = 3f;
-            [Draw("Brake release speed")]
+            [Draw("Car brake release speed")]
             public float releaseSpeed = 0.1f;
-            [Draw("Brake recharge speed")]
+            [Draw("Car reservoir recharge speed")]
             public float chargeSpeed = 0.25f;
 
             [Draw("Enable logging")] public bool enableLogging = false;

@@ -276,6 +276,7 @@ namespace DvMod.AirBrake.Components
                     dt,
                     ref state.cylinderPressure,
                     Constants.BrakeCylinderVolume,
+                    Main.settings.locoReleaseSpeed,
                     minPressure: targetPressure);
                 // AirBrake.DebugLog(car, $"26SA.Vent after: cylinder={state.cylinderPressure}");
                 return massFlow;
