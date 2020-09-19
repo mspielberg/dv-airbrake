@@ -211,10 +211,7 @@ namespace DvMod.AirBrake
         {
             public static bool Prefix()
             {
-                if (!Main.enabled)
-                    return true;
-                Updater.Setup();
-                return false;
+                return !Main.enabled;
             }
         }
 
@@ -229,17 +226,23 @@ namespace DvMod.AirBrake
     {
         private static GameObject? rootObject;
 
-        public static void Setup()
+        public static void OnToggle(bool enable)
         {
-            if (rootObject == null)
+            if (enable && rootObject == null)
             {
                 rootObject = new GameObject();
                 rootObject.AddComponent<Updater>();
+            }
+            else if (!enable && rootObject != null)
+            {
+                Object.Destroy(rootObject);
+                rootObject = null;
             }
         }
 
         public void FixedUpdate()
         {
+            Assert.IsTrue(Main.enabled);
             foreach (var brakeset in Brakeset.allSets)
                 AirBrake.Update(brakeset, Time.fixedDeltaTime);
         }
