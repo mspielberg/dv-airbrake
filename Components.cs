@@ -105,7 +105,6 @@ namespace DvMod.AirBrake.Components
             private const float LapPosition = 0.5f;
             private const float ServicePosition = 0.9f;
 
-            private const float RechargeRate = 10f;
             private const float ApplicationRate = 0.175f; // ~= 2.5 psi/s
 
             private static float Equalize(BrakeSystem car, float dt)
@@ -116,6 +115,7 @@ namespace DvMod.AirBrake.Components
                     dt,
                     ref state.brakePipePressureUnsmoothed,
                     BrakeSystemConsts.PIPE_VOLUME,
+                    Main.settings.locoApplySpeed,
                     minPressure: state.equalizingReservoirPressure);
             }
 
@@ -129,7 +129,7 @@ namespace DvMod.AirBrake.Components
                     ref car.mainReservoirPressureUnsmoothed,
                     BrakeSystemConsts.PIPE_VOLUME,
                     Constants.MainReservoirVolume,
-                    RechargeRate,
+                    Main.settings.locoRechargeSpeed,
                     Constants.MaxBrakePipePressure);
                 massFlow += AirFlow.OneWayFlow(
                     dt,
@@ -137,7 +137,7 @@ namespace DvMod.AirBrake.Components
                     ref car.mainReservoirPressureUnsmoothed,
                     BrakeSystemConsts.PIPE_VOLUME,
                     Constants.MainReservoirVolume,
-                    RechargeRate,
+                    Main.settings.locoRechargeSpeed,
                     Constants.MaxBrakePipePressure);
                 return massFlow;
             }
@@ -211,7 +211,17 @@ namespace DvMod.AirBrake.Components
     {
         private static class BrakeValve26C
         {
-            private const float RechargeSpeed = 10f;
+            private static float Equalize(BrakeSystem car, float dt)
+            {
+                var state = ExtraBrakeState.Instance(car);
+                return AirFlow.Vent(
+                    dt,
+                    ref state.brakePipePressureUnsmoothed,
+                    BrakeSystemConsts.PIPE_VOLUME,
+                    Main.settings.locoApplySpeed,
+                    minPressure: state.equalizingReservoirPressure);
+            }
+
             private static float Charge(BrakeSystem car, float dt, float targetPressure)
             {
                 var state = ExtraBrakeState.Instance(car);
@@ -221,7 +231,15 @@ namespace DvMod.AirBrake.Components
                     ref car.mainReservoirPressureUnsmoothed,
                     BrakeSystemConsts.PIPE_VOLUME,
                     Constants.MainReservoirVolume,
-                    RechargeSpeed,
+                    Main.settings.locoRechargeSpeed,
+                    maxDestPressure: targetPressure);
+                massFlow += AirFlow.OneWayFlow(
+                    dt,
+                    ref state.equalizingReservoirPressure,
+                    ref car.mainReservoirPressureUnsmoothed,
+                    BrakeSystemConsts.PIPE_VOLUME,
+                    Constants.MainReservoirVolume,
+                    Main.settings.locoRechargeSpeed,
                     maxDestPressure: targetPressure);
                 return massFlow;
             }
@@ -231,9 +249,8 @@ namespace DvMod.AirBrake.Components
                 var state = ExtraBrakeState.Instance(car);
                 return AirFlow.Vent(
                     dt,
-                    ref state.brakePipePressureUnsmoothed,
+                    ref state.equalizingReservoirPressure,
                     BrakeSystemConsts.PIPE_VOLUME,
-                    Main.settings.applySpeed,
                     minPressure: targetPressure);
             }
 
@@ -241,11 +258,12 @@ namespace DvMod.AirBrake.Components
             {
                 var state = ExtraBrakeState.Instance(car);
                 var targetPressure = Constants.MaxBrakePipePressure * (1f - car.trainBrakePosition);
-                if (targetPressure > state.brakePipePressureUnsmoothed + Constants.ApplicationThreshold)
-                    return (Charge(car, dt, targetPressure), 0f);
-                if (targetPressure < state.brakePipePressureUnsmoothed - Constants.ApplicationThreshold)
-                    return (0f, Vent(car, dt, targetPressure));
-                return (0f, 0f);
+                // AirBrake.DebugLog(car, $"target={targetPressure}, EQ={state.equalizingReservoirPressure}, BP={state.brakePipePressureUnsmoothed}");
+                if (targetPressure > state.equalizingReservoirPressure || targetPressure > state.brakePipePressureUnsmoothed)
+                    return (Charge(car, dt, targetPressure), Equalize(car, dt));
+                if (targetPressure < state.equalizingReservoirPressure)
+                    return (0f, Vent(car, dt, targetPressure) + Equalize(car, dt));
+                return (0f, Equalize(car, dt));
             }
         }
 
@@ -262,7 +280,7 @@ namespace DvMod.AirBrake.Components
                     ref car.mainReservoirPressureUnsmoothed,
                     Constants.BrakeCylinderVolume,
                     Constants.MainReservoirVolume,
-                    Main.settings.applySpeed,
+                    Main.settings.locoApplySpeed,
                     targetPressure);
                 // AirBrake.DebugLog(car, $"26SA.Charge after: cylinder={state.cylinderPressure}");
                 return massFlow;

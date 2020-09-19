@@ -128,6 +128,8 @@ namespace DvMod.AirBrake
         private static void BalanceBrakePipe(Brakeset brakeset, float dt)
         {
             var cars = brakeset.cars.AsReadOnly();
+            // foreach(var car in cars)
+            //     DebugLog(car, $"Before balance: BP={car.brakePipePressure}");
             var states = cars.Select(ExtraBrakeState.Instance).ToList();
             var pairs = cars.Zip(cars.Skip(1), (a, b) => (a, b));
             for (int i = 0; i < Main.settings.pipeBalanceSpeed; i++)
@@ -139,8 +141,17 @@ namespace DvMod.AirBrake
                     var stateB = states[j + 1];
                     var mean = (stateA.brakePipePressureUnsmoothed + stateB.brakePipePressureUnsmoothed) / 2f;
                     stateA.brakePipePressureUnsmoothed = stateB.brakePipePressureUnsmoothed = mean;
+                    // AirFlow.Equalize(
+                    //     dt,
+                    //     ref stateA.brakePipePressureUnsmoothed,
+                    //     ref stateB.brakePipePressureUnsmoothed,
+                    //     BrakeSystemConsts.PIPE_VOLUME,
+                    //     BrakeSystemConsts.PIPE_VOLUME,
+                    //     float.PositiveInfinity);
                 }
             }
+            // foreach(var car in cars)
+            //     DebugLog(car, $"After balance: BP={car.brakePipePressure}");
         }
 
         private static float GetMechanicalBrakeFactor(BrakeSystem car)
@@ -160,10 +171,12 @@ namespace DvMod.AirBrake
 
         private static void UpdateBrakePipeGauge(BrakeSystem car)
         {
+            // AirBrake.DebugLog(car, $"before: BP={ExtraBrakeState.Instance(car).brakePipePressureUnsmoothed}, gauge={car.brakePipePressure}, vel={car.brakePipePressureRef}");
             car.brakePipePressure = Mathf.SmoothDamp(
                 car.brakePipePressure,
                 ExtraBrakeState.Instance(car).brakePipePressureUnsmoothed,
                 ref car.brakePipePressureRef, 0.2f);
+            // AirBrake.DebugLog(car, $"after: BP={ExtraBrakeState.Instance(car).brakePipePressureUnsmoothed}, gauge={car.brakePipePressure}, vel={car.brakePipePressureRef}");
         }
 
         private static void UpdateHUD(BrakeSystem car)
