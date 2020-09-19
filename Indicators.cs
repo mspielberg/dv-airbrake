@@ -86,9 +86,14 @@ namespace DvMod.AirBrake
         {
             public static void Postfix(TrainCar __instance)
             {
-                __instance.brakeSystem.brakePipePressure = 0f;
-                __instance.brakeSystem.mainReservoirPressure = 0f;
-                __instance.brakeSystem.mainReservoirPressureUnsmoothed = 0f;
+                var system = __instance.brakeSystem;
+
+                if (system.brakePipePressure == 1f &&
+                    system.mainReservoirPressure == 1f &&
+                    system.mainReservoirPressureUnsmoothed == 1f)
+                {
+                    system.brakePipePressure = system.mainReservoirPressure = system.mainReservoirPressureUnsmoothed = 0f;
+                }
 
                 __instance.InteriorPrefabLoaded += InitializeGauges;
             }
@@ -175,10 +180,12 @@ namespace DvMod.AirBrake
 
             public static void Postfix(IndicatorsDiesel __instance)
             {
-                var state = ExtraBrakeState.Instance(TrainCar.Resolve(__instance.gameObject).brakeSystem);
+                var car = TrainCar.Resolve(__instance.gameObject);
+                var state = ExtraBrakeState.Instance(car.brakeSystem);
                 var indicators = extraIndicators[__instance];
                 indicators.brakeCylinder.value = state.cylinderPressure;
                 indicators.equalizingReservoir.value = state.equalizingReservoirPressure;
+                Main.DebugLog($"{car.ID}: cylinder={state.cylinderPressure}, EQ={state.equalizingReservoirPressure}");
             }
         }
     }
