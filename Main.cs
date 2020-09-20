@@ -39,7 +39,7 @@ namespace DvMod.AirBrake
         static private bool OnToggle(UnityModManager.ModEntry modEntry, bool value)
         {
             enabled = value;
-            Updater.OnToggle(value);
+            Updater.Enabled = value;
             return true;
         }
 

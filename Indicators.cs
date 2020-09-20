@@ -23,10 +23,10 @@ namespace DvMod.AirBrake
         private static Material? redMaterial;
         private static void ChangeToRedNeedle(Indicator gauge)
         {
-            Main.DebugLog($"gauge = {gauge}");
+            // Main.DebugLog($"gauge = {gauge}");
             var needle = gauge.transform.GetChild(0);
-            Main.DebugLog($"needle = {needle}");
-            Main.DebugLog(DumpHierarchy(gauge.gameObject));
+            // Main.DebugLog($"needle = {needle}");
+            // Main.DebugLog(DumpHierarchy(gauge.gameObject));
             var renderer = needle.GetComponentInChildren<MeshRenderer>();
             if (redMaterial == null)
             {
@@ -45,7 +45,7 @@ namespace DvMod.AirBrake
         {
             if (interior == null)
                 return;
-            Main.DebugLog("InitializeGauges");
+            // Main.DebugLog("InitializeGauges");
             var (mainResIndicator, brakePipeIndicator) = TrainCar.Resolve(interior).carType switch
             {
                 TrainCarType.LocoDiesel =>

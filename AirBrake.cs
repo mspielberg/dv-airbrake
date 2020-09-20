@@ -224,7 +224,10 @@ namespace DvMod.AirBrake
         {
             public static bool Prefix()
             {
-                return !Main.enabled;
+                if (!Main.enabled)
+                    return true;
+                Updater.Enabled = true;
+                return false;
             }
         }
 
@@ -238,17 +241,27 @@ namespace DvMod.AirBrake
     public class Updater : MonoBehaviour
     {
         private static GameObject? rootObject;
+        public static bool Enabled {
+            get => rootObject != null;
+            set
+            {
+                if (rootObject == null)
+                    SetEnabled(value);
+            }
+        }
 
-        public static void OnToggle(bool enable)
+        private static void SetEnabled(bool enable)
         {
             if (enable && rootObject == null)
             {
+                Main.DebugLog("Starting Updater");
                 rootObject = new GameObject();
                 rootObject.AddComponent<Updater>();
             }
             else if (!enable && rootObject != null)
             {
-                Object.Destroy(rootObject);
+                Main.DebugLog("Stopping Updater");
+                Destroy(rootObject);
                 rootObject = null;
             }
         }
