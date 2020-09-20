@@ -5,7 +5,7 @@ namespace DvMod.AirBrake.Components
 {
     public static class AngleCocks
     {
-        private const float VentRate = 10f;
+        private const float VentRate = 100f;
         private static void Update(BrakeSystem car, float dt)
         {
             var state = ExtraBrakeState.Instance(car);
