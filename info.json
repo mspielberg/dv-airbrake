@@ -2,7 +2,7 @@
   "Id": "AirBrake",
   "DisplayName": "Air Brake",
   "Author": "Zeibach",
-  "Version": "0.2.0",
+  "Version": "0.3.0",
   "LoadAfter": ["HeadsUpDisplay"],
   "AssemblyName": "AirBrake.dll",
   "EntryMethod": "DvMod.AirBrake.Main.Load",
