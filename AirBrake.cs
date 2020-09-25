@@ -14,7 +14,6 @@ namespace DvMod.AirBrake
 
         public const float MaxMainReservoirPressure = 8f;
         public const float MaxBrakePipePressure = 5f;
-        public const float CylinderThresholdPressure = 0.5f;
 
         public const float MainReservoirVolume = 20f * AuxReservoirVolume;
         public const float AuxReservoirVolume = 45f;
@@ -164,7 +163,7 @@ namespace DvMod.AirBrake
         private static void ApplyBrakingForce(BrakeSystem car)
         {
             var state = ExtraBrakeState.Instance(car);
-            var cylinderBrakingFactor = Mathf.InverseLerp(Constants.CylinderThresholdPressure, Constants.FullApplicationPressure, state.cylinderPressure);
+            var cylinderBrakingFactor = Mathf.InverseLerp(Main.settings.returnSpringStrength, Constants.FullApplicationPressure, state.cylinderPressure);
             var mechanicalBrakingFactor = GetMechanicalBrakeFactor(car);
             car.brakingFactor = Mathf.Max(mechanicalBrakingFactor, cylinderBrakingFactor);
         }
