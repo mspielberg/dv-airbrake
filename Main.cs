@@ -85,6 +85,9 @@ namespace DvMod.AirBrake
             [Draw("Car reservoir recharge speed")]
             public float chargeSpeed = 0.5f;
 
+            [Draw("Brake return spring strength")]
+            public float returnSpringStrength = 1f;
+
             [Draw("Enable logging")] public bool enableLogging = false;
 
             override public void Save(UnityModManager.ModEntry entry)
