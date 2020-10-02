@@ -115,12 +115,14 @@ namespace DvMod.AirBrake
     {
         private static void RechargeMainReservoir(BrakeSystem car, float dt)
         {
+            var state = ExtraBrakeState.Instance(car);
             if (car.compressorRunning)
             {
                 var increase = car.compressorProductionRate * Main.settings.compressorSpeed * dt;
                 car.mainReservoirPressureUnsmoothed =
                         Mathf.Clamp(car.mainReservoirPressureUnsmoothed + increase, 0f, Constants.MaxMainReservoirPressure);
             }
+            AirFlow.OneWayFlow(dt, ref car.mainReservoirPressureUnsmoothed, ref state.brakePipePressureUnsmoothed, Constants.MainReservoirVolume, BrakeSystemConsts.PIPE_VOLUME);
             car.mainReservoirPressure = Mathf.SmoothDamp(car.mainReservoirPressure, car.mainReservoirPressureUnsmoothed, ref car.mainResPressureRef, 0.8f);
         }
 
