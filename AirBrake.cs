@@ -242,13 +242,10 @@ namespace DvMod.AirBrake
     public class Updater : MonoBehaviour
     {
         private static GameObject? rootObject;
-        public static bool Enabled {
+        public static bool Enabled
+        {
             get => rootObject != null;
-            set
-            {
-                if (rootObject == null)
-                    SetEnabled(value);
-            }
+            set => SetEnabled(value);
         }
 
         private static void SetEnabled(bool enable)

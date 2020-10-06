@@ -14,7 +14,18 @@ namespace DvMod.AirBrake
         {
             mod = modEntry;
 
-            try { settings = Settings.Load<Settings>(modEntry); } catch {}
+            try
+            {
+                var loaded = Settings.Load<Settings>(modEntry);
+                if (loaded.version == modEntry.Info.Version)
+                    settings = loaded;
+                else
+                    settings = new Settings();
+            }
+            catch
+            {
+                settings = new Settings();
+            }
             var harmony = new Harmony(modEntry.Info.Id);
             harmony.PatchAll();
 
@@ -77,7 +88,7 @@ namespace DvMod.AirBrake
             public float locoRechargeSpeed = 20f;
 
             [Draw("Train brake pipe balance speed", Min = 1, Max = 100)]
-            public int pipeBalanceSpeed = 5;
+            public int pipeBalanceSpeed = 10;
             [Draw("Car brake application speed")]
             public float applySpeed = 3f;
             [Draw("Car brake release speed")]
@@ -89,6 +100,7 @@ namespace DvMod.AirBrake
             public float returnSpringStrength = 1f;
 
             [Draw("Enable logging")] public bool enableLogging = false;
+            public readonly string? version = mod?.Info.Version;
 
             override public void Save(UnityModManager.ModEntry entry)
             {
