@@ -1,11 +1,11 @@
-using DvMod.HeadsUpDisplay;
 using System;
-using System.Linq;
 using UnityModManagerNet;
+using Formatter = System.Func<float, string>;
+using Pusher = System.Action<TrainCar, float>;
 
 namespace DvMod.AirBrake
 {
-    internal class HeadsUpDisplayBridge
+    internal sealed class HeadsUpDisplayBridge
     {
         public static HeadsUpDisplayBridge? instance;
 
@@ -13,49 +13,68 @@ namespace DvMod.AirBrake
         {
             try
             {
-                if (UnityModManager.FindMod("HeadsUpDisplay") == null)
+                var hudMod = UnityModManager.FindMod("HeadsUpDisplay");
+                if (hudMod?.Loaded != true)
                     return;
-                instance = new HeadsUpDisplayBridge();
-                instance.Register();
+                instance = new HeadsUpDisplayBridge(hudMod);
             }
             catch (System.IO.FileNotFoundException)
             {
             }
         }
 
-        private void Register()
+        private static readonly Type[] RegisterPushArgumentTypes = new Type[]
         {
-            PushProvider auxReservoirPressureProvider = new PushProvider(
-                "Aux reservoir", () => true, v => $"{v:F2} bar");
-            foreach (var nonLocoType in Enum.GetValues(typeof(TrainCarType)).OfType<TrainCarType>().Where(t => !CarTypes.IsLocomotive(t)))
-                Registry.Register(nonLocoType, auxReservoirPressureProvider);
+            typeof(string),
+            typeof(Formatter),
+            typeof(IComparable)
+        };
 
-            PushProvider brakeCylinderPressureProvider = new PushProvider(
-                "Brake cylinder", () => true, v => $"{v:F2} bar");
-            Registry.Register(RegistryKeys.AllCars, brakeCylinderPressureProvider);
+        private readonly Pusher? auxReservoirPressurePusher;
+        private readonly Pusher? brakeCylinderPressurePusher;
+        private readonly Pusher? equalizingReservoirPressurePusher;
 
-            PushProvider equalizationReservoirPressureProvider = new PushProvider(
-                "Equalizing reservoir", () => true, v => $"{v:F2} bar");
-            foreach (var locoType in CarTypes.locomotivesMap)
-                Registry.Register(locoType, equalizationReservoirPressureProvider);
+        private HeadsUpDisplayBridge(UnityModManager.ModEntry hudMod)
+        {
+            void RegisterPush(out Pusher pusher, string label, Formatter formatter, IComparable? order = null)
+            {
+                hudMod.Invoke(
+                    "DvMod.HeadsUpDisplay.Registry.RegisterPush",
+                    out var temp,
+                    new object?[] { label, formatter, order },
+                    RegisterPushArgumentTypes);
+                pusher = (Pusher)temp;
+            }
+
+            RegisterPush(
+                out auxReservoirPressurePusher,
+                "Aux reservoir",
+                v => $"{v:F2} bar");
+
+            RegisterPush(
+                out brakeCylinderPressurePusher,
+                "Brake cylinder",
+                v => $"{v:F2} bar");
+
+            RegisterPush(
+                out equalizingReservoirPressurePusher,
+                "Equalizing reservoir",
+                v => $"{v:F2} bar");
         }
 
         public void UpdateAuxReservoirPressure(TrainCar car, float pressure)
         {
-            if (Registry.GetProvider(TrainCarType.NotSet, "Aux reservoir") is PushProvider pp)
-                pp.MixSmoothedValue(car, pressure);
+            auxReservoirPressurePusher?.Invoke(car, pressure);
         }
 
         public void UpdateBrakeCylinderPressure(TrainCar car, float brakeCylinderPressure)
         {
-            if (Registry.GetProvider(TrainCarType.NotSet, "Brake cylinder") is PushProvider pp)
-                pp.MixSmoothedValue(car, brakeCylinderPressure);
+            brakeCylinderPressurePusher?.Invoke(car, brakeCylinderPressure);
         }
 
         public void UpdateEqualizingReservoirPressure(TrainCar car, float equalizingReservoirPressure)
         {
-            if (Registry.GetProvider(car.carType, "Equalizing reservoir") is PushProvider pp)
-                pp.MixSmoothedValue(car, equalizingReservoirPressure);
+            equalizingReservoirPressurePusher?.Invoke(car, equalizingReservoirPressure);
         }
     }
 }
