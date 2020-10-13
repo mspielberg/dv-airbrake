@@ -12,3 +12,6 @@ https://scholars.unh.edu/cgi/viewcontent.cgi?article=2471&context=dissertation
 
 Mathematical modeling for brake pipe and valve action
 https://asmedigitalcollection.asme.org/computationalnonlinear/article/12/5/051017/474452/Railway-Air-Brake-Model-and-Parallel-Computing
+
+McShane, C. L. (1924). Modern Air Brakes. United States: Griffin & Winters.
+https://www.google.com/books/edition/_/C8E3AAAAMAAJ?hl=en&gbpv=0
