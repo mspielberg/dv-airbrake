@@ -29,6 +29,8 @@ namespace DvMod.AirBrake
             var harmony = new Harmony(modEntry.Info.Id);
             harmony.PatchAll();
 
+            Commands.Register();
+
             modEntry.OnGUI = OnGui;
             modEntry.OnSaveGUI = OnSaveGui;
             modEntry.OnToggle = OnToggle;
