@@ -122,7 +122,13 @@ namespace DvMod.AirBrake
                 car.mainReservoirPressureUnsmoothed =
                         Mathf.Clamp(car.mainReservoirPressureUnsmoothed + increase, 0f, Constants.MaxMainReservoirPressure);
             }
-            AirFlow.OneWayFlow(dt, ref car.mainReservoirPressureUnsmoothed, ref state.brakePipePressureUnsmoothed, Constants.MainReservoirVolume, BrakeSystemConsts.PIPE_VOLUME);
+            AirFlow.OneWayFlow(
+                dt,
+                ref car.mainReservoirPressureUnsmoothed,
+                ref state.brakePipePressureUnsmoothed,
+                Constants.MainReservoirVolume,
+                BrakeSystemConsts.PIPE_VOLUME,
+                float.PositiveInfinity);
             car.mainReservoirPressure = Mathf.SmoothDamp(car.mainReservoirPressure, car.mainReservoirPressureUnsmoothed, ref car.mainResPressureRef, 0.8f);
         }
 
