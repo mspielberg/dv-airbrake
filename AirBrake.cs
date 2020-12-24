@@ -194,6 +194,17 @@ namespace DvMod.AirBrake
             HeadsUpDisplayBridge.instance?.UpdateEqualizingReservoirPressure(car.GetTrainCar(), state.equalizingReservoirPressure);
         }
 
+        public static bool IsSelfLap(TrainCar car)
+        {
+            return car.carType switch
+            {
+                TrainCarType.LocoShunter => Main.settings.shunterSelfLap,
+                TrainCarType.LocoSteamHeavy => Main.settings.steamHeavySelfLap,
+                TrainCarType.LocoDiesel => Main.settings.dieselSelfLap,
+                _ => true,
+            };
+        }
+
         public static void Update(Brakeset brakeset, float dt)
         {
             AngleCocks.Update(brakeset, dt);
@@ -204,14 +215,7 @@ namespace DvMod.AirBrake
                 {
                     RechargeMainReservoir(car, dt);
 
-                    var selfLap = car.GetTrainCar().carType switch
-                    {
-                        TrainCarType.LocoShunter => Main.settings.shunterSelfLap,
-                        TrainCarType.LocoSteamHeavy => Main.settings.steamHeavySelfLap,
-                        TrainCarType.LocoDiesel => Main.settings.dieselSelfLap,
-                        _ => true,
-                    };
-                    if (selfLap)
+                    if (IsSelfLap(car.GetTrainCar()))
                         BrakeValve26L.Update(car, dt);
                     else
                         BrakeValve6ET.Update(car, dt);

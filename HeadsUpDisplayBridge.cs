@@ -1,6 +1,7 @@
 using System;
 using UnityModManagerNet;
 using Formatter = System.Func<float, string>;
+using Provider = System.Func<TrainCar, float?>;
 using Pusher = System.Action<TrainCar, float>;
 
 namespace DvMod.AirBrake
@@ -23,6 +24,14 @@ namespace DvMod.AirBrake
             }
         }
 
+        private static readonly Type[] RegisterPullArgumentTypes = new Type[]
+        {
+            typeof(string),
+            typeof(Provider),
+            typeof(Formatter),
+            typeof(IComparable)
+        };
+
         private static readonly Type[] RegisterPushArgumentTypes = new Type[]
         {
             typeof(string),
@@ -36,6 +45,15 @@ namespace DvMod.AirBrake
 
         private HeadsUpDisplayBridge(UnityModManager.ModEntry hudMod)
         {
+            void RegisterPull(string label, Provider provider, Formatter formatter, IComparable? order = null)
+            {
+                hudMod.Invoke(
+                    "DvMod.HeadsUpDisplay.Registry.RegisterPull",
+                    out var _,
+                    new object?[] { label, provider, formatter, order },
+                    RegisterPullArgumentTypes);
+            }
+
             void RegisterPush(out Pusher pusher, string label, Formatter formatter, IComparable? order = null)
             {
                 hudMod.Invoke(
@@ -45,6 +63,21 @@ namespace DvMod.AirBrake
                     RegisterPushArgumentTypes);
                 pusher = (Pusher)temp;
             }
+
+            RegisterPull(
+                "Train brake position",
+                car =>
+                    !CarTypes.IsLocomotive(car.carType)
+                    ? (float?)null
+                    : AirBrake.IsSelfLap(car)
+                        ? car.brakeSystem.trainBrakePositionSmoothed
+                        : Components.BrakeValve6ET.Mode(car.brakeSystem),
+                v =>
+                    v <= 1 ? v.ToString("P0")
+                    : v == 2 ? "Running"
+                    : v == 3 ? "Lap"
+                    : v == 4 ? "Service"
+                    : "Emergency");
 
             RegisterPush(
                 out auxReservoirPressurePusher,

@@ -99,12 +99,12 @@ namespace DvMod.AirBrake.Components
 
     public static class BrakeValve6ET
     {
+        private const float RunningPosition = 0.1f;
+        private const float LapPosition = 0.5f;
+        private const float ServicePosition = 0.9f;
+
         private static class BrakeValveH6
         {
-            private const float RunningPosition = 0.1f;
-            private const float LapPosition = 0.5f;
-            private const float ServicePosition = 0.9f;
-
             private const float ApplicationRate = 0.175f; // ~= 2.5 psi/s
 
             private static float Equalize(BrakeSystem car, float dt)
@@ -184,6 +184,19 @@ namespace DvMod.AirBrake.Components
                     return (0f, EmergencyVent(car, dt));
                 }
             }
+        }
+
+        public static int Mode(BrakeSystem car)
+        {
+            var position = car.trainBrakePosition;
+            if (position < RunningPosition)
+                return 2;
+            else if (position < LapPosition)
+                return 3;
+            else if (position < ServicePosition)
+                return 4;
+            else
+                return 5;
         }
 
         public static void Update(BrakeSystem car, float dt)
