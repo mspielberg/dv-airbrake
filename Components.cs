@@ -160,7 +160,8 @@ namespace DvMod.AirBrake.Components
                 return AirFlow.Vent(
                     dt,
                     ref state.brakePipePressureUnsmoothed,
-                    BrakeSystemConsts.PIPE_VOLUME);
+                    BrakeSystemConsts.PIPE_VOLUME,
+                    float.PositiveInfinity);
             }
 
             public static (float, float) Update(BrakeSystem car, float dt)
