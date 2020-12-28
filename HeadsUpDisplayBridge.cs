@@ -69,8 +69,8 @@ namespace DvMod.AirBrake
                 car =>
                     !CarTypes.IsLocomotive(car.carType)
                     ? (float?)null
-                    : AirBrake.IsSelfLap(car)
-                        ? car.brakeSystem.trainBrakePositionSmoothed
+                    : AirBrake.IsSelfLap(car.carType)
+                        ? car.brakeSystem.trainBrakePosition
                         : Components.BrakeValve6ET.Mode(car.brakeSystem),
                 v =>
                     v <= 1 ? v.ToString("P0")
