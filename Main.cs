@@ -83,9 +83,9 @@ namespace DvMod.AirBrake
             [Draw("Air compressor production")]
             public float compressorSpeed = Constants.MaxMainReservoirPressure / 0.8f / 300f;
             [Draw("Locomotive brake application speed")]
-            public float locoApplySpeed = 3f;
+            public float locoApplySpeed = 10f;
             [Draw("Locomotive brake release speed")]
-            public float locoReleaseSpeed = 2f;
+            public float locoReleaseSpeed = 10f;
             [Draw("Locomotive brake pipe recharge speed")]
             public float locoRechargeSpeed = 20f;
 
