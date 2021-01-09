@@ -79,7 +79,7 @@ namespace DvMod.AirBrake
 
             var pressureDelta = p2 - p1;
             Assert.IsTrue(pressureDelta >= 0);
-            var naturalMassTransfer = Mathf.Sqrt(pressureDelta) * rateMultiplier * dt;
+            var naturalMassTransfer = pressureDelta * rateMultiplier * dt;
             var massTransferToLimit = pressureChangeLimit * v1;
             var actualTransfer = TransferMass(ref p1, ref p2, v1, v2, Mathf.Min(naturalMassTransfer, massTransferToLimit));
             return actualTransfer;
