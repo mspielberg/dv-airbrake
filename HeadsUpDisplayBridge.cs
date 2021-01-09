@@ -68,7 +68,7 @@ namespace DvMod.AirBrake
                 "Train brake position",
                 car =>
                     !CarTypes.IsLocomotive(car.carType)
-                    ? (float?)null
+                    ? (float)ExtraBrakeState.Instance(car.brakeSystem).tripleValveMode
                     : AirBrake.IsSelfLap(car.carType)
                         ? car.brakeSystem.trainBrakePosition
                         : Components.BrakeValve6ET.Mode(car.brakeSystem),
