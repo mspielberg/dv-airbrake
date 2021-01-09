@@ -189,9 +189,11 @@ namespace DvMod.AirBrake
         private static void UpdateHUD(BrakeSystem car)
         {
             var state = ExtraBrakeState.Instance(car);
-            HeadsUpDisplayBridge.instance?.UpdateAuxReservoirPressure(car.GetTrainCar(), state.auxReservoirPressure);
+            if (CarTypes.IsAnyLocomotiveOrTender(car.GetTrainCar().carType))
+                HeadsUpDisplayBridge.instance?.UpdateEqualizingReservoirPressure(car.GetTrainCar(), state.equalizingReservoirPressure);
+            else
+                HeadsUpDisplayBridge.instance?.UpdateAuxReservoirPressure(car.GetTrainCar(), state.auxReservoirPressure);
             HeadsUpDisplayBridge.instance?.UpdateBrakeCylinderPressure(car.GetTrainCar(), state.cylinderPressure);
-            HeadsUpDisplayBridge.instance?.UpdateEqualizingReservoirPressure(car.GetTrainCar(), state.equalizingReservoirPressure);
         }
 
         public static bool IsSelfLap(TrainCarType carType)
