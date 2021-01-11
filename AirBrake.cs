@@ -135,30 +135,17 @@ namespace DvMod.AirBrake
         private static void BalanceBrakePipe(Brakeset brakeset, float dt)
         {
             var cars = brakeset.cars.AsReadOnly();
-            // foreach(var car in cars)
-            //     DebugLog(car, $"Before balance: BP={car.brakePipePressure}");
             var states = cars.Select(ExtraBrakeState.Instance).ToList();
-            var pairs = cars.Zip(cars.Skip(1), (a, b) => (a, b));
-            for (int i = 0; i < Main.settings.pipeBalanceSpeed; i++)
+            for (int i = 0; i < states.Count - 1; i++)
             {
-                for (int j = 0; j < states.Count - 1; j++)
-                {
-                    // AirBrake.DebugLog(a, $"EqualizeBrakePipe: a={a.brakePipePressure}, b={b.brakePipePressure}");
-                    var stateA = states[j];
-                    var stateB = states[j + 1];
-                    var mean = (stateA.brakePipePressureUnsmoothed + stateB.brakePipePressureUnsmoothed) / 2f;
-                    stateA.brakePipePressureUnsmoothed = stateB.brakePipePressureUnsmoothed = mean;
-                    // AirFlow.Equalize(
-                    //     dt,
-                    //     ref stateA.brakePipePressureUnsmoothed,
-                    //     ref stateB.brakePipePressureUnsmoothed,
-                    //     BrakeSystemConsts.PIPE_VOLUME,
-                    //     BrakeSystemConsts.PIPE_VOLUME,
-                    //     float.PositiveInfinity);
-                }
+                var stateA = states[i];
+                var pressureA = stateA.brakePipePressureUnsmoothed;
+                var stateB = states[i + 1];
+                var pressureB = stateB.brakePipePressureUnsmoothed;
+                var mean = (pressureA + pressureB) / 2f;
+                stateA.brakePipePressureUnsmoothed = Mathf.Lerp(pressureA, mean, Main.settings.pipeBalanceSpeed);
+                stateB.brakePipePressureUnsmoothed = Mathf.Lerp(pressureB, mean, Main.settings.pipeBalanceSpeed);
             }
-            // foreach(var car in cars)
-            //     DebugLog(car, $"After balance: BP={car.brakePipePressure}");
         }
 
         private static float GetMechanicalBrakeFactor(BrakeSystem car)
