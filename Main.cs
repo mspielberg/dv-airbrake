@@ -94,9 +94,9 @@ namespace DvMod.AirBrake
             [Draw("Car brake application speed")]
             public float applySpeed = 3f;
             [Draw("Car brake release speed")]
-            public float releaseSpeed = 0.1f;
+            public float releaseSpeed = 0.5f;
             [Draw("Car reservoir recharge speed")]
-            public float chargeSpeed = 0.5f;
+            public float chargeSpeed = 2.0f;
 
             [Draw("Brake return spring strength")]
             public float returnSpringStrength = 1f;
