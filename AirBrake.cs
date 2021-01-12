@@ -134,17 +134,35 @@ namespace DvMod.AirBrake
 
         private static void BalanceBrakePipe(Brakeset brakeset, float dt)
         {
-            var cars = brakeset.cars.AsReadOnly();
-            var states = cars.Select(ExtraBrakeState.Instance).ToList();
-            for (int i = 0; i < states.Count - 1; i++)
+            var states = brakeset.cars.Select(ExtraBrakeState.Instance).ToArray();
+            var fullCycles = Mathf.Floor(Main.settings.pipeBalanceSpeed);
+            var partialCycle = Main.settings.pipeBalanceSpeed - fullCycles;
+
+            for (int i = 0; i < fullCycles; i++)
             {
-                var stateA = states[i];
-                var pressureA = stateA.brakePipePressureUnsmoothed;
-                var stateB = states[i + 1];
-                var pressureB = stateB.brakePipePressureUnsmoothed;
-                var mean = (pressureA + pressureB) / 2f;
-                stateA.brakePipePressureUnsmoothed = Mathf.Lerp(pressureA, mean, Main.settings.pipeBalanceSpeed);
-                stateB.brakePipePressureUnsmoothed = Mathf.Lerp(pressureB, mean, Main.settings.pipeBalanceSpeed);
+                for (int carIndex = 0; carIndex < states.Length - 1; carIndex++)
+                {
+                    var stateA = states[carIndex];
+                    var pressureA = stateA.brakePipePressureUnsmoothed;
+                    var stateB = states[carIndex + 1];
+                    var pressureB = stateB.brakePipePressureUnsmoothed;
+                    var mean = (pressureA + pressureB) / 2f;
+                    stateA.brakePipePressureUnsmoothed = stateB.brakePipePressureUnsmoothed = mean;
+                }
+            }
+
+            if (partialCycle >= 0.01f)
+            {
+                for (int carIndex = 0; carIndex < states.Length - 1; carIndex++)
+                {
+                    var stateA = states[carIndex];
+                    var pressureA = stateA.brakePipePressureUnsmoothed;
+                    var stateB = states[carIndex + 1];
+                    var pressureB = stateB.brakePipePressureUnsmoothed;
+                    var mean = (pressureA + pressureB) / 2f;
+                    stateA.brakePipePressureUnsmoothed = Mathf.Lerp(pressureA, mean, partialCycle);
+                    stateB.brakePipePressureUnsmoothed = Mathf.Lerp(pressureB, mean, partialCycle);
+                }
             }
         }
 

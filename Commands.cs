@@ -49,6 +49,7 @@ namespace DvMod.AirBrake
                         else
                         {
                             state.auxReservoirPressure = Constants.MaxBrakePipePressure;
+                            state.tripleValveMode = Components.PlainTripleValve.Mode.Charge;
                         }
                     }
                 }
