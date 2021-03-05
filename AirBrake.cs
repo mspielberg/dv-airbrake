@@ -39,6 +39,19 @@ namespace DvMod.AirBrake
 
         private static readonly Cache<BrakeSystem, ExtraBrakeState> cache = new Cache<BrakeSystem, ExtraBrakeState>(_ => new ExtraBrakeState());
         public static ExtraBrakeState Instance(BrakeSystem system) => cache[system];
+
+        public override string ToString()
+        {
+            return $"BP={brakePipePressureUnsmoothed},Cyl={cylinderPressure},EQ={equalizingReservoirPressure},Aux={auxReservoirPressure},tripleMode={tripleValveMode}";
+        }
+
+        public bool Valid {
+            get =>
+                float.IsFinite(brakePipePressureUnsmoothed)
+                && float.IsFinite(cylinderPressure)
+                && float.IsFinite(equalizingReservoirPressure)
+                && float.IsFinite(auxReservoirPressure);
+        }
     }
 
     public static class BrakeSystemExtensions

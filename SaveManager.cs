@@ -14,7 +14,15 @@ namespace DvMod.AirBrake
             public static void Postfix(TrainCar car, JObject __result)
             {
                 var state = ExtraBrakeState.Instance(car.brakeSystem);
-                __result[SaveKey] = JObject.FromObject(state);
+                if (state.Valid)
+                {
+                    Main.DebugLog($"Saving state for {car.ID}: {state}");
+                    __result[SaveKey] = JObject.FromObject(state);
+                }
+                else
+                {
+                    Main.DebugLog($"Skipping corrupted ExtraBrakeState {state} for {car.ID}");
+                }
             }
         }
 
@@ -28,6 +36,7 @@ namespace DvMod.AirBrake
                     var serializer = new JsonSerializer();
                     var state = ExtraBrakeState.Instance(__result.brakeSystem);
                     serializer.Populate(new JTokenReader(token), state);
+                    Main.DebugLog($"Loaded state for {carData["id"]}: {state}");
                 }
             }
         }
