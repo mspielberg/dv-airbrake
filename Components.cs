@@ -15,7 +15,7 @@ namespace DvMod.AirBrake.Components
                     ? AirFlow.Vent(
                         dt,
                         ref state.brakePipePressureUnsmoothed,
-                        BrakeSystemConsts.PIPE_VOLUME,
+                        Constants.BrakePipeVolume,
                         VentRate)
                     : 0f;
                 // AirBrake.DebugLog(car, $"cockOpen={cock.IsOpenToAtmosphere}, ventRate={rate}");
@@ -66,7 +66,7 @@ namespace DvMod.AirBrake.Components
                         ref state.auxReservoirPressure,
                         ref state.brakePipePressureUnsmoothed,
                         Constants.AuxReservoirVolume,
-                        BrakeSystemConsts.PIPE_VOLUME,
+                        Constants.BrakePipeVolume,
                         Main.settings.chargeSpeed);
 
                     if (state.brakePipePressureUnsmoothed < state.auxReservoirPressure - ActivationThreshold)
@@ -114,7 +114,7 @@ namespace DvMod.AirBrake.Components
                 return AirFlow.Vent(
                     dt,
                     ref state.brakePipePressureUnsmoothed,
-                    BrakeSystemConsts.PIPE_VOLUME,
+                    Constants.BrakePipeVolume,
                     Main.settings.locoApplySpeed,
                     minPressure: state.equalizingReservoirPressure);
             }
@@ -127,7 +127,7 @@ namespace DvMod.AirBrake.Components
                     dt,
                     ref state.brakePipePressureUnsmoothed,
                     ref car.mainReservoirPressureUnsmoothed,
-                    BrakeSystemConsts.PIPE_VOLUME,
+                    Constants.BrakePipeVolume,
                     Constants.MainReservoirVolume,
                     Main.settings.locoRechargeSpeed,
                     Constants.MaxBrakePipePressure);
@@ -135,7 +135,7 @@ namespace DvMod.AirBrake.Components
                     dt,
                     ref state.equalizingReservoirPressure,
                     ref car.mainReservoirPressureUnsmoothed,
-                    BrakeSystemConsts.PIPE_VOLUME,
+                    Constants.BrakePipeVolume,
                     Constants.MainReservoirVolume,
                     Main.settings.locoRechargeSpeed,
                     Constants.MaxBrakePipePressure);
@@ -149,7 +149,7 @@ namespace DvMod.AirBrake.Components
                 return AirFlow.VentPressure(
                     dt,
                     ref state.equalizingReservoirPressure,
-                    BrakeSystemConsts.PIPE_VOLUME,
+                    Constants.BrakePipeVolume,
                     ApplicationRate);
             }
 
@@ -160,7 +160,7 @@ namespace DvMod.AirBrake.Components
                 return AirFlow.Vent(
                     dt,
                     ref state.brakePipePressureUnsmoothed,
-                    BrakeSystemConsts.PIPE_VOLUME,
+                    Constants.BrakePipeVolume,
                     float.PositiveInfinity);
             }
 
@@ -231,7 +231,7 @@ namespace DvMod.AirBrake.Components
                 return AirFlow.Vent(
                     dt,
                     ref state.brakePipePressureUnsmoothed,
-                    BrakeSystemConsts.PIPE_VOLUME,
+                    Constants.BrakePipeVolume,
                     Main.settings.locoApplySpeed,
                     minPressure: state.equalizingReservoirPressure);
             }
@@ -243,7 +243,7 @@ namespace DvMod.AirBrake.Components
                     dt,
                     ref state.brakePipePressureUnsmoothed,
                     ref car.mainReservoirPressureUnsmoothed,
-                    BrakeSystemConsts.PIPE_VOLUME,
+                    Constants.BrakePipeVolume,
                     Constants.MainReservoirVolume,
                     Main.settings.locoRechargeSpeed,
                     maxDestPressure: targetPressure);
@@ -251,7 +251,7 @@ namespace DvMod.AirBrake.Components
                     dt,
                     ref state.equalizingReservoirPressure,
                     ref car.mainReservoirPressureUnsmoothed,
-                    BrakeSystemConsts.PIPE_VOLUME,
+                    Constants.BrakePipeVolume,
                     Constants.MainReservoirVolume,
                     Main.settings.locoRechargeSpeed,
                     maxDestPressure: targetPressure);
@@ -264,7 +264,7 @@ namespace DvMod.AirBrake.Components
                 return AirFlow.Vent(
                     dt,
                     ref state.equalizingReservoirPressure,
-                    BrakeSystemConsts.PIPE_VOLUME,
+                    Constants.BrakePipeVolume,
                     minPressure: targetPressure);
             }
 

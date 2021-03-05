@@ -15,6 +15,7 @@ namespace DvMod.AirBrake
         public const float MaxMainReservoirPressure = 8f;
         public const float MaxBrakePipePressure = 5f;
 
+        public const float BrakePipeVolume = 10f;
         public const float MainReservoirVolume = 20f * AuxReservoirVolume;
         public const float AuxReservoirVolume = 45f;
         public const float BrakeCylinderVolume = AuxReservoirVolume / 2.5f;
@@ -127,7 +128,7 @@ namespace DvMod.AirBrake
                 ref car.mainReservoirPressureUnsmoothed,
                 ref state.brakePipePressureUnsmoothed,
                 Constants.MainReservoirVolume,
-                BrakeSystemConsts.PIPE_VOLUME,
+                Constants.BrakePipeVolume,
                 float.PositiveInfinity);
             car.mainReservoirPressure = Mathf.SmoothDamp(car.mainReservoirPressure, car.mainReservoirPressureUnsmoothed, ref car.mainResPressureRef, 0.8f);
         }
