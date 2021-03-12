@@ -36,23 +36,54 @@ namespace DvMod.AirBrake.Components
         }
     }
 
+    public enum TripleValveType
+    {
+        Plain,
+        KType,
+    }
+
+    public enum TripleValveMode
+    {
+        FullRelease,
+        Service,
+        ServiceLap,
+        RetardedRelease,
+        Emergency,
+    }
+
+    public static class TripleValveModeExtensions
+    {
+        public static char Abbrev(this TripleValveMode mode) => mode switch {
+            TripleValveMode.FullRelease     => 'R',
+            TripleValveMode.Service         => 'S',
+            TripleValveMode.ServiceLap      => 'L',
+            TripleValveMode.RetardedRelease => 'r',
+            TripleValveMode.Emergency       => 'E',
+            _                               => '?',
+        };
+
+        public static string FromAbbrev(char abbrev) => abbrev switch {
+            'R' => "Full release",
+            'S' => "Service",
+            'L' => "Lap",
+            'r' => "Retarded release",
+            'E' => "Emergency",
+            _   => "Unknown",
+        };
+    }
+
     public static class PlainTripleValve
     {
-        private const float ActivationThreshold = 0.05f;
-
-        public enum Mode
-        {
-            Charge,
-            Apply,
-            Lap,
-        }
+        private const float SlideThreshold = 0.10f;
+        private const float GraduatingThreshold = 0.05f;
 
         public static void Update(BrakeSystem car, float dt)
         {
             ExtraBrakeState state = ExtraBrakeState.Instance(car);
+            var delta = state.brakePipePressureUnsmoothed - state.auxReservoirPressure;
             switch (state.tripleValveMode)
             {
-                case Mode.Charge:
+                case TripleValveMode.FullRelease:
                     // RELEASE
                     AirFlow.Vent(
                         dt,
@@ -69,11 +100,11 @@ namespace DvMod.AirBrake.Components
                         Constants.BrakePipeVolume,
                         Main.settings.chargeSpeed);
 
-                    if (state.brakePipePressureUnsmoothed < state.auxReservoirPressure - ActivationThreshold)
-                        state.tripleValveMode = Mode.Apply;
+                    if (delta < -SlideThreshold)
+                        state.tripleValveMode = TripleValveMode.Service;
                     return;
 
-                case Mode.Apply:
+                case TripleValveMode.Service:
                     // APPLY
                     AirFlow.Equalize(
                         dt,
@@ -83,15 +114,137 @@ namespace DvMod.AirBrake.Components
                         Constants.AuxReservoirVolume,
                         Main.settings.applySpeed);
 
-                    if (state.brakePipePressureUnsmoothed > state.auxReservoirPressure + ActivationThreshold)
-                        state.tripleValveMode = Mode.Lap;
+                    if (delta > GraduatingThreshold)
+                        state.tripleValveMode = TripleValveMode.ServiceLap;
                     return;
 
-                case Mode.Lap:
-                    if (state.brakePipePressureUnsmoothed < state.auxReservoirPressure - (ActivationThreshold * 2))
-                        state.tripleValveMode = Mode.Apply;
-                    else if (state.brakePipePressureUnsmoothed > state.auxReservoirPressure + (ActivationThreshold * 2))
-                        state.tripleValveMode = Mode.Charge;
+                case TripleValveMode.ServiceLap:
+                    if (delta < -GraduatingThreshold)
+                        state.tripleValveMode = TripleValveMode.Service;
+                    else if (delta > SlideThreshold)
+                        state.tripleValveMode = TripleValveMode.FullRelease;
+                    return;
+
+                default:
+                    state.tripleValveMode = TripleValveMode.ServiceLap;
+                    return;
+            }
+        }
+    }
+
+    public static class KTypeTripleValve
+    {
+        private const float EmergencyThreshold = 1.0f;
+        private const float RetardThreshold = 0.15f;
+        private const float SlideThreshold = 0.10f;
+        private const float GraduatingThreshold = 0.05f;
+
+        private const float EmergencyMultiplier = 2f;
+        private const float RetardMultiplier = 0.5f;
+
+        private const float ApplicationPipeMultiplier = 0.2f;
+
+        public static void Update(BrakeSystem car, float dt)
+        {
+            ExtraBrakeState state = ExtraBrakeState.Instance(car);
+            var delta = state.brakePipePressureUnsmoothed - state.auxReservoirPressure;
+            switch (state.tripleValveMode)
+            {
+                case TripleValveMode.FullRelease:
+                    // RELEASE
+                    AirFlow.Vent(
+                        dt,
+                        ref state.cylinderPressure,
+                        Constants.BrakeCylinderVolume,
+                        Main.settings.releaseSpeed);
+
+                    // CHARGE
+                    AirFlow.OneWayFlow(
+                        dt,
+                        ref state.auxReservoirPressure,
+                        ref state.brakePipePressureUnsmoothed,
+                        Constants.AuxReservoirVolume,
+                        Constants.BrakePipeVolume,
+                        Main.settings.chargeSpeed);
+
+                    if (delta < -SlideThreshold)
+                        state.tripleValveMode = TripleValveMode.Service;
+                    else if (delta > RetardThreshold)
+                        state.tripleValveMode = TripleValveMode.RetardedRelease;
+                    return;
+
+                case TripleValveMode.Service:
+                    // APPLY (from brake pipe)
+                    AirFlow.OneWayFlow(
+                        dt,
+                        ref state.cylinderPressure,
+                        ref state.brakePipePressureUnsmoothed,
+                        Constants.BrakeCylinderVolume,
+                        Constants.BrakePipeVolume,
+                        Main.settings.applySpeed * Main.settings.kTriplePipeDrainRate);
+
+                    // APPLY (from auxiliary reservoir)
+                    AirFlow.Equalize(
+                        dt,
+                        ref state.cylinderPressure,
+                        ref state.auxReservoirPressure,
+                        Constants.BrakeCylinderVolume,
+                        Constants.AuxReservoirVolume,
+                        Main.settings.applySpeed);
+
+                    if (delta < -EmergencyThreshold)
+                        state.tripleValveMode = TripleValveMode.Emergency;
+                    else if (delta > GraduatingThreshold)
+                        state.tripleValveMode = TripleValveMode.ServiceLap;
+                    return;
+
+                case TripleValveMode.ServiceLap:
+                    if (delta < -GraduatingThreshold)
+                        state.tripleValveMode = TripleValveMode.Service;
+                    else if (delta > SlideThreshold)
+                        state.tripleValveMode = TripleValveMode.FullRelease;
+                    return;
+
+                case TripleValveMode.RetardedRelease:
+                    // RELEASE
+                    AirFlow.Vent(
+                        dt,
+                        ref state.cylinderPressure,
+                        Constants.BrakeCylinderVolume,
+                        Main.settings.releaseSpeed * Main.settings.kTripleRetardedReleaseRate);
+
+                    // CHARGE
+                    AirFlow.OneWayFlow(
+                        dt,
+                        ref state.auxReservoirPressure,
+                        ref state.brakePipePressureUnsmoothed,
+                        Constants.AuxReservoirVolume,
+                        Constants.BrakePipeVolume,
+                        Main.settings.chargeSpeed * Main.settings.kTripleRetardedReleaseRate);
+
+                    if (delta < RetardThreshold)
+                        state.tripleValveMode = TripleValveMode.FullRelease;
+                    return;
+
+                case TripleValveMode.Emergency:
+                    AirFlow.OneWayFlow(
+                        dt,
+                        ref state.cylinderPressure,
+                        ref state.brakePipePressureUnsmoothed,
+                        Constants.BrakeCylinderVolume,
+                        Constants.BrakePipeVolume,
+                        Main.settings.applySpeed * EmergencyMultiplier);
+
+                    AirFlow.Equalize(
+                        dt,
+                        ref state.cylinderPressure,
+                        ref state.auxReservoirPressure,
+                        Constants.BrakeCylinderVolume,
+                        Constants.AuxReservoirVolume,
+                        Main.settings.applySpeed);
+
+                    if (delta > -EmergencyThreshold)
+                        state.tripleValveMode = TripleValveMode.Service;
                     return;
             }
         }
@@ -268,10 +421,19 @@ namespace DvMod.AirBrake.Components
                     minPressure: targetPressure);
             }
 
+            private const float MinimumReduction = Constants.MaxBrakePipePressure - 0.35f;
+            private static float TargetPressure(float trainBrakePosition)
+            {
+                if (trainBrakePosition < 0.01f)
+                    return Constants.MaxBrakePipePressure;
+                else
+                    return Mathf.Lerp(MinimumReduction, 0f, (trainBrakePosition - 0.1f) / 0.9f);
+            }
+
             public static (float, float) Update(BrakeSystem car, float dt)
             {
                 var state = ExtraBrakeState.Instance(car);
-                var targetPressure = Constants.MaxBrakePipePressure * (1f - car.trainBrakePosition);
+                var targetPressure = TargetPressure(car.trainBrakePosition);
                 // AirBrake.DebugLog(car, $"target={targetPressure}, EQ={state.equalizingReservoirPressure}, BP={state.brakePipePressureUnsmoothed}");
                 if (targetPressure > state.equalizingReservoirPressure || targetPressure > state.brakePipePressureUnsmoothed)
                     return (Charge(car, dt, targetPressure), Equalize(car, dt));

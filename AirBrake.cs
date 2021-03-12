@@ -35,7 +35,7 @@ namespace DvMod.AirBrake
 
         // Type C 10" combined car equipment
         public float auxReservoirPressure;
-        public PlainTripleValve.Mode tripleValveMode;
+        public TripleValveMode tripleValveMode;
 
         private static readonly Cache<BrakeSystem, ExtraBrakeState> cache = new Cache<BrakeSystem, ExtraBrakeState>(_ => new ExtraBrakeState());
         public static ExtraBrakeState Instance(BrakeSystem system) => cache[system];
@@ -256,7 +256,11 @@ namespace DvMod.AirBrake
                 }
                 else
                 {
-                    PlainTripleValve.Update(car, dt);
+                    switch (Main.settings.tripleValveType)
+                    {
+                        case TripleValveType.KType: KTypeTripleValve.Update(car, dt); break;
+                        case TripleValveType.Plain: PlainTripleValve.Update(car, dt); break;
+                    }
                 }
                 ApplyBrakingForce(car);
                 UpdateBrakePipeGauge(car);
@@ -308,11 +312,25 @@ namespace DvMod.AirBrake
             }
         }
 
+        private static void CheckKeyInput()
+        {
+            var car = PlayerManager.Car;
+            if (car == null)
+                return;
+            if (KeyCode.B.IsPressed() && (KeyCode.LeftShift.IsPressed() || KeyCode.RightShift.IsPressed()))
+            {
+                var state = ExtraBrakeState.Instance(PlayerManager.Car.brakeSystem);
+                AirFlow.Vent(Time.fixedDeltaTime, ref state.auxReservoirPressure, Constants.AuxReservoirVolume);
+                AirFlow.Vent(Time.fixedDeltaTime, ref state.cylinderPressure, Constants.BrakeCylinderVolume);
+            }
+        }
+
         public void FixedUpdate()
         {
             Assert.IsTrue(Main.enabled);
             foreach (var brakeset in Brakeset.allSets)
                 AirBrake.Update(brakeset, Time.fixedDeltaTime);
+            CheckKeyInput();
         }
     }
 }

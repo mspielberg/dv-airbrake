@@ -1,3 +1,4 @@
+using DvMod.AirBrake.Components;
 using System;
 using UnityModManagerNet;
 using Formatter = System.Func<float, string>;
@@ -67,17 +68,26 @@ namespace DvMod.AirBrake
             RegisterPull(
                 "Train brake position",
                 car =>
-                    !CarTypes.IsLocomotive(car.carType)
-                    ? (float)ExtraBrakeState.Instance(car.brakeSystem).tripleValveMode
-                    : AirBrake.IsSelfLap(car.carType)
+                {
+                    if (!CarTypes.IsLocomotive(car.carType))
+                        return null;
+                    return AirBrake.IsSelfLap(car.carType)
                         ? car.brakeSystem.trainBrakePosition
-                        : Components.BrakeValve6ET.Mode(car.brakeSystem),
+                        : Components.BrakeValve6ET.Mode(car.brakeSystem);
+                },
                 v =>
-                    v <= 1 ? v.ToString("P0")
-                    : v == 2 ? "Running"
-                    : v == 3 ? "Lap"
-                    : v == 4 ? "Service"
-                    : "Emergency");
+                {
+                    return v <= 1 ? v.ToString("P0")
+                        : v == 2 ? "Running"
+                        : v == 3 ? "Lap"
+                        : v == 4 ? "Service"
+                        : "Emergency";
+                });
+
+            RegisterPull(
+                "Triple valve mode",
+                car => CarTypes.IsAnyLocomotiveOrTender(car.carType) ? null : (float?)(int)ExtraBrakeState.Instance(car.brakeSystem).tripleValveMode.Abbrev(),
+                v => Components.TripleValveModeExtensions.FromAbbrev((char)v));
 
             RegisterPush(
                 out auxReservoirPressurePusher,
