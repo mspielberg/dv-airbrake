@@ -137,12 +137,8 @@ namespace DvMod.AirBrake.Components
         private const float EmergencyThreshold = 1.0f;
         private const float RetardThreshold = 0.15f;
         private const float SlideThreshold = 0.10f;
-        private const float GraduatingThreshold = 0.05f;
-
-        private const float EmergencyMultiplier = 2f;
-        private const float RetardMultiplier = 0.5f;
-
-        private const float ApplicationPipeMultiplier = 0.2f;
+        private const float GraduatingThreshold = 0.01f;
+        private const float EmergencyMultiplier = 10f;
 
         public static void Update(BrakeSystem car, float dt)
         {
@@ -241,7 +237,7 @@ namespace DvMod.AirBrake.Components
                         ref state.auxReservoirPressure,
                         Constants.BrakeCylinderVolume,
                         Constants.AuxReservoirVolume,
-                        Main.settings.applySpeed);
+                        Main.settings.applySpeed * EmergencyMultiplier);
 
                     if (delta > -EmergencyThreshold)
                         state.tripleValveMode = TripleValveMode.Service;

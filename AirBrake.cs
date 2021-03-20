@@ -23,6 +23,8 @@ namespace DvMod.AirBrake
             MaxBrakePipePressure * AuxReservoirVolume / (AuxReservoirVolume + BrakeCylinderVolume);
 
         public const float PressureGaugeMax = 10f;
+
+        public const float BleedValveRate = 10f;
     }
 
     internal class ExtraBrakeState
@@ -320,8 +322,8 @@ namespace DvMod.AirBrake
             if (KeyCode.B.IsPressed() && (KeyCode.LeftShift.IsPressed() || KeyCode.RightShift.IsPressed()))
             {
                 var state = ExtraBrakeState.Instance(PlayerManager.Car.brakeSystem);
-                AirFlow.Vent(Time.fixedDeltaTime, ref state.auxReservoirPressure, Constants.AuxReservoirVolume);
-                AirFlow.Vent(Time.fixedDeltaTime, ref state.cylinderPressure, Constants.BrakeCylinderVolume);
+                AirFlow.Vent(Time.fixedDeltaTime, ref state.auxReservoirPressure, Constants.AuxReservoirVolume, Constants.BleedValveRate);
+                AirFlow.Vent(Time.fixedDeltaTime, ref state.cylinderPressure, Constants.BrakeCylinderVolume, Constants.BleedValveRate);
             }
         }
 
