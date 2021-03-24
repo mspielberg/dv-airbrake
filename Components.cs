@@ -77,9 +77,8 @@ namespace DvMod.AirBrake.Components
         private const float SlideThreshold = 0.10f;
         private const float GraduatingThreshold = 0.05f;
 
-        public static void Update(BrakeSystem car, float dt)
+        public static void Update(BrakeSystem car, ExtraBrakeState state, float dt)
         {
-            ExtraBrakeState state = ExtraBrakeState.Instance(car);
             var delta = state.brakePipePressureUnsmoothed - state.auxReservoirPressure;
             switch (state.tripleValveMode)
             {
@@ -140,9 +139,8 @@ namespace DvMod.AirBrake.Components
         private const float GraduatingThreshold = 0.01f;
         private const float EmergencyMultiplier = 10f;
 
-        public static void Update(BrakeSystem car, float dt)
+        public static void Update(BrakeSystem car, ExtraBrakeState state, float dt)
         {
-            ExtraBrakeState state = ExtraBrakeState.Instance(car);
             var delta = state.brakePipePressureUnsmoothed - state.auxReservoirPressure;
             switch (state.tripleValveMode)
             {
@@ -256,9 +254,8 @@ namespace DvMod.AirBrake.Components
         {
             private const float ApplicationRate = 0.175f; // ~= 2.5 psi/s
 
-            private static float Equalize(BrakeSystem car, float dt)
+            private static float Equalize(BrakeSystem car, ExtraBrakeState state, float dt)
             {
-                var state = ExtraBrakeState.Instance(car);
                 // AirBrake.DebugLog(car, $"Calling AirFlow.Vent with P={car.brakePipePressure}, minP={state.equalizingReservoirPressure}");
                 return AirFlow.Vent(
                     dt,
@@ -268,10 +265,9 @@ namespace DvMod.AirBrake.Components
                     minPressure: state.equalizingReservoirPressure);
             }
 
-            private static float Charge(BrakeSystem car, float dt)
+            private static float Charge(BrakeSystem car, ExtraBrakeState state, float dt)
             {
                 // AirBrake.DebugLog(car, $"BrakeValveH6.Charge");
-                var state = ExtraBrakeState.Instance(car);
                 var massFlow = AirFlow.OneWayFlow(
                     dt,
                     ref state.brakePipePressureUnsmoothed,
@@ -291,10 +287,9 @@ namespace DvMod.AirBrake.Components
                 return massFlow;
             }
 
-            private static float Vent(BrakeSystem car, float dt)
+            private static float Vent(BrakeSystem car, ExtraBrakeState state, float dt)
             {
                 // AirBrake.DebugLog(car, $"BrakeValveH6.Vent");
-                var state = ExtraBrakeState.Instance(car);
                 return AirFlow.VentPressure(
                     dt,
                     ref state.equalizingReservoirPressure,
@@ -302,9 +297,8 @@ namespace DvMod.AirBrake.Components
                     ApplicationRate);
             }
 
-            private static float EmergencyVent(BrakeSystem car, float dt)
+            private static float EmergencyVent(BrakeSystem car, ExtraBrakeState state, float dt)
             {
-                var state = ExtraBrakeState.Instance(car);
                 // AirBrake.DebugLog(car, $"BrakeValveH6.EmergencyVent");
                 return AirFlow.Vent(
                     dt,
@@ -313,25 +307,25 @@ namespace DvMod.AirBrake.Components
                     float.PositiveInfinity);
             }
 
-            public static (float, float) Update(BrakeSystem car, float dt)
+            public static (float, float) Update(BrakeSystem car, ExtraBrakeState state, float dt)
             {
                 var position = car.trainBrakePosition;
                 // AirBrake.DebugLog(car, $"BrakeValveH6: position={position}");
                 if (position < RunningPosition)
                 {
-                    return (Charge(car, dt), 0f);
+                    return (Charge(car, state, dt), 0f);
                 }
                 else if (position < LapPosition)
                 {
-                    return (0f, Equalize(car, dt));
+                    return (0f, Equalize(car, state, dt));
                 }
                 else if (position < ServicePosition)
                 {
-                    return (0f, Vent(car, dt) + Equalize(car, dt));
+                    return (0f, Vent(car, state, dt) + Equalize(car, state, dt));
                 }
                 else
                 {
-                    return (0f, EmergencyVent(car, dt));
+                    return (0f, EmergencyVent(car, state, dt));
                 }
             }
         }
@@ -349,13 +343,13 @@ namespace DvMod.AirBrake.Components
                 return 5;
         }
 
-        public static void Update(BrakeSystem car, float dt)
+        public static void Update(BrakeSystem car, ExtraBrakeState state, float dt)
         {
             // AirBrake.DebugLog(car, $"BrakeValve6ET: initial BP={car.brakePipePressure}");
-            var (mainChargeFlow, mainVentFlow) = BrakeValveH6.Update(car, dt);
+            var (mainChargeFlow, mainVentFlow) = BrakeValveH6.Update(car, state, dt);
             // AirBrake.DebugLog(car, $"BrakeValve6ET: after H6: BP={car.brakePipePressure}");
             // Equivalent to LA6-P independent brake valve
-            var (independentChargeFlow, independentVentFlow) = BrakeValve26L.BrakeValve26SA.Update(car, dt);
+            var (independentChargeFlow, independentVentFlow) = BrakeValve26L.BrakeValve26SA.Update(car, state, dt);
             // AirBrake.DebugLog(car, $"BrakeValve6ET: after 26SA: BP={car.brakePipePressure}");
             car.mainResToPipeFlow = Mathf.SmoothDamp(
                 car.mainResToPipeFlow,
@@ -374,9 +368,8 @@ namespace DvMod.AirBrake.Components
     {
         private static class BrakeValve26C
         {
-            private static float Equalize(BrakeSystem car, float dt)
+            private static float Equalize(BrakeSystem car, ExtraBrakeState state, float dt)
             {
-                var state = ExtraBrakeState.Instance(car);
                 return AirFlow.Vent(
                     dt,
                     ref state.brakePipePressureUnsmoothed,
@@ -385,9 +378,8 @@ namespace DvMod.AirBrake.Components
                     minPressure: state.equalizingReservoirPressure);
             }
 
-            private static float Charge(BrakeSystem car, float dt, float targetPressure)
+            private static float Charge(BrakeSystem car, ExtraBrakeState state, float dt, float targetPressure)
             {
-                var state = ExtraBrakeState.Instance(car);
                 var massFlow = AirFlow.OneWayFlow(
                     dt,
                     ref state.brakePipePressureUnsmoothed,
@@ -407,9 +399,8 @@ namespace DvMod.AirBrake.Components
                 return massFlow;
             }
 
-            private static float Vent(BrakeSystem car, float dt, float targetPressure)
+            private static float Vent(BrakeSystem car, ExtraBrakeState state, float dt, float targetPressure)
             {
-                var state = ExtraBrakeState.Instance(car);
                 return AirFlow.Vent(
                     dt,
                     ref state.equalizingReservoirPressure,
@@ -426,25 +417,23 @@ namespace DvMod.AirBrake.Components
                     return Mathf.Lerp(MinimumReduction, 0f, (trainBrakePosition - 0.1f) / 0.9f);
             }
 
-            public static (float, float) Update(BrakeSystem car, float dt)
+            public static (float, float) Update(BrakeSystem car, ExtraBrakeState state, float dt)
             {
-                var state = ExtraBrakeState.Instance(car);
                 var targetPressure = TargetPressure(car.trainBrakePosition);
                 // AirBrake.DebugLog(car, $"target={targetPressure}, EQ={state.equalizingReservoirPressure}, BP={state.brakePipePressureUnsmoothed}");
                 if (targetPressure > state.equalizingReservoirPressure || targetPressure > state.brakePipePressureUnsmoothed)
-                    return (Charge(car, dt, targetPressure), Equalize(car, dt));
+                    return (Charge(car, state, dt, targetPressure), Equalize(car, state, dt));
                 if (targetPressure < state.equalizingReservoirPressure)
-                    return (0f, Vent(car, dt, targetPressure) + Equalize(car, dt));
-                return (0f, Equalize(car, dt));
+                    return (0f, Vent(car, state, dt, targetPressure) + Equalize(car, state, dt));
+                return (0f, Equalize(car, state, dt));
             }
         }
 
         public static class BrakeValve26SA
         {
             private const float BailoffPositionLimit = 0.1f;
-            private static float Charge(BrakeSystem car, float dt, float targetPressure)
+            private static float Charge(BrakeSystem car, ExtraBrakeState state, float dt, float targetPressure)
             {
-                var state = ExtraBrakeState.Instance(car);
                 // AirBrake.DebugLog(car, $"26SA.Charge before: cylinder={state.cylinderPressure}");
                 float massFlow = AirFlow.OneWayFlow(
                     dt,
@@ -458,9 +447,8 @@ namespace DvMod.AirBrake.Components
                 return massFlow;
             }
 
-            private static float Vent(BrakeSystem car, float dt, float targetPressure)
+            private static float Vent(BrakeSystem car, ExtraBrakeState state, float dt, float targetPressure)
             {
-                var state = ExtraBrakeState.Instance(car);
                 // AirBrake.DebugLog(car, $"26SA.Vent before: cylinder={state.cylinderPressure}");
                 float massFlow = AirFlow.Vent(
                     dt,
@@ -472,9 +460,8 @@ namespace DvMod.AirBrake.Components
                 return massFlow;
             }
 
-            public static (float, float) Update(BrakeSystem car, float dt)
+            public static (float, float) Update(BrakeSystem car, ExtraBrakeState state, float dt)
             {
-                var state = ExtraBrakeState.Instance(car);
                 var automaticTarget = Mathf.InverseLerp(Constants.MaxBrakePipePressure, Constants.FullApplicationPressure, car.brakePipePressure);
                 // AirBrake.DebugLog(car, $"BP={car.brakePipePressure}, maxCyl={Constants.FullApplicationPressure}, automaticTarget={automaticTarget}");
                 var independentTarget = Mathf.InverseLerp(BailoffPositionLimit * 2f, 1f, car.independentBrakePosition);
@@ -482,19 +469,19 @@ namespace DvMod.AirBrake.Components
 
                 // AirBrake.DebugLog(car, $"BrakeValve26SA: handle={car.independentBrakePosition}, cylinder = {state.cylinderPressure}, target = {targetPressure}");
                 if (car.independentBrakePosition < BailoffPositionLimit)
-                    return (0f, Vent(car, dt, 0f));
+                    return (0f, Vent(car, state, dt, 0f));
                 if (targetPressure < state.cylinderPressure - Constants.ApplicationThreshold)
-                    return (0f, Vent(car, dt, targetPressure));
+                    return (0f, Vent(car, state, dt, targetPressure));
                 if (targetPressure > state.cylinderPressure + Constants.ApplicationThreshold)
-                    return (Charge(car, dt, targetPressure), 0f);
+                    return (Charge(car, state, dt, targetPressure), 0f);
                 return (0f, 0f);
             }
         }
 
-        public static void Update(BrakeSystem car, float dt)
+        public static void Update(BrakeSystem car, ExtraBrakeState state, float dt)
         {
-            var (mainChargeFlow, mainVentFlow) = BrakeValve26C.Update(car, dt);
-            var (independentChargeFlow, independentVentFlow) = BrakeValve26SA.Update(car, dt);
+            var (mainChargeFlow, mainVentFlow) = BrakeValve26C.Update(car, state, dt);
+            var (independentChargeFlow, independentVentFlow) = BrakeValve26SA.Update(car, state, dt);
             car.mainResToPipeFlow = Mathf.SmoothDamp(
                 car.mainResToPipeFlow,
                 mainChargeFlow + independentChargeFlow,

@@ -7,7 +7,7 @@ using UnityEngine.Assertions;
 
 namespace DvMod.AirBrake
 {
-    static internal class Constants
+    public static class Constants
     {
         public const float AtmosphereVolume = 1e6f;
         public const float ApplicationThreshold = 0.01f;
@@ -27,7 +27,7 @@ namespace DvMod.AirBrake
         public const float BleedValveRate = 10f;
     }
 
-    internal class ExtraBrakeState
+    public class ExtraBrakeState
     {
         public float brakePipePressureUnsmoothed;
         public float cylinderPressure;
@@ -58,15 +58,14 @@ namespace DvMod.AirBrake
 
     public static class BrakeSystemExtensions
     {
-        private static readonly Cache<BrakeSystem, TrainCar> trainCars =
-            new Cache<BrakeSystem, TrainCar>(bs => TrainCar.Resolve(bs.gameObject));
-        public static TrainCar GetTrainCar(this BrakeSystem brakeSystem) => trainCars[brakeSystem];
+        public static TrainCar GetTrainCar(this BrakeSystem brakeSystem) =>
+            TrainCar.Resolve(brakeSystem.gameObject);
 
         public static ref float CylinderPressure(this BrakeSystem brakeSystem) =>
             ref ExtraBrakeState.Instance(brakeSystem).cylinderPressure;
     }
 
-    internal static class AirFlow
+    public static class AirFlow
     {
         private static void AdjustMass(ref float pressure, float volume, float deltaMass, float min, float max)
             => pressure = Mathf.Clamp(pressure + (deltaMass / volume), min, max);
@@ -129,9 +128,8 @@ namespace DvMod.AirBrake
 
     public static class AirBrake
     {
-        private static void RechargeMainReservoir(BrakeSystem car, float dt)
+        private static void RechargeMainReservoir(BrakeSystem car, ExtraBrakeState state, float dt)
         {
-            var state = ExtraBrakeState.Instance(car);
             if (car.compressorRunning)
             {
                 var increase = car.compressorProductionRate * Main.settings.compressorSpeed * dt;
@@ -189,32 +187,30 @@ namespace DvMod.AirBrake
             return 0f;
         }
 
-        private static void ApplyBrakingForce(BrakeSystem car)
+        private static void ApplyBrakingForce(BrakeSystem car, ExtraBrakeState state)
         {
-            var state = ExtraBrakeState.Instance(car);
             var cylinderBrakingFactor = Mathf.InverseLerp(Main.settings.returnSpringStrength, Constants.FullApplicationPressure, state.cylinderPressure);
             var mechanicalBrakingFactor = GetMechanicalBrakeFactor(car);
             car.brakingFactor = Mathf.Max(mechanicalBrakingFactor, cylinderBrakingFactor);
         }
 
-        private static void UpdateBrakePipeGauge(BrakeSystem car)
+        private static void UpdateBrakePipeGauge(BrakeSystem car, ExtraBrakeState state)
         {
             // AirBrake.DebugLog(car, $"before: BP={ExtraBrakeState.Instance(car).brakePipePressureUnsmoothed}, gauge={car.brakePipePressure}, vel={car.brakePipePressureRef}");
             car.brakePipePressure = Mathf.SmoothDamp(
                 car.brakePipePressure,
-                ExtraBrakeState.Instance(car).brakePipePressureUnsmoothed,
+                state.brakePipePressureUnsmoothed,
                 ref car.brakePipePressureRef, 0.2f);
             // AirBrake.DebugLog(car, $"after: BP={ExtraBrakeState.Instance(car).brakePipePressureUnsmoothed}, gauge={car.brakePipePressure}, vel={car.brakePipePressureRef}");
         }
 
-        private static void UpdateHUD(BrakeSystem car)
+        private static void UpdateHUD(TrainCar trainCar, ExtraBrakeState state)
         {
-            var state = ExtraBrakeState.Instance(car);
-            if (CarTypes.IsAnyLocomotiveOrTender(car.GetTrainCar().carType))
-                HeadsUpDisplayBridge.instance?.UpdateEqualizingReservoirPressure(car.GetTrainCar(), state.equalizingReservoirPressure);
+            if (CarTypes.IsAnyLocomotiveOrTender(trainCar.carType))
+                HeadsUpDisplayBridge.instance?.UpdateEqualizingReservoirPressure(trainCar, state.equalizingReservoirPressure);
             else
-                HeadsUpDisplayBridge.instance?.UpdateAuxReservoirPressure(car.GetTrainCar(), state.auxReservoirPressure);
-            HeadsUpDisplayBridge.instance?.UpdateBrakeCylinderPressure(car.GetTrainCar(), state.cylinderPressure);
+                HeadsUpDisplayBridge.instance?.UpdateAuxReservoirPressure(trainCar, state.auxReservoirPressure);
+            HeadsUpDisplayBridge.instance?.UpdateBrakeCylinderPressure(trainCar, state.cylinderPressure);
         }
 
         public static bool IsSelfLap(TrainCarType carType)
@@ -241,16 +237,17 @@ namespace DvMod.AirBrake
             BalanceBrakePipe(brakeset, dt);
             foreach (var car in brakeset.cars)
             {
+                var state = ExtraBrakeState.Instance(car);
                 var trainCar = car.GetTrainCar();
                 var carType = trainCar.carType;
                 if (car.hasCompressor)
                 {
-                    RechargeMainReservoir(car, dt);
+                    RechargeMainReservoir(car, state, dt);
 
                     if (IsSelfLap(carType))
-                        BrakeValve26L.Update(car, dt);
+                        BrakeValve26L.Update(car, state, dt);
                     else
-                        BrakeValve6ET.Update(car, dt);
+                        BrakeValve6ET.Update(car, state, dt);
                 }
                 else if (CarTypes.IsTender(carType))
                 {
@@ -260,13 +257,13 @@ namespace DvMod.AirBrake
                 {
                     switch (Main.settings.tripleValveType)
                     {
-                        case TripleValveType.KType: KTypeTripleValve.Update(car, dt); break;
-                        case TripleValveType.Plain: PlainTripleValve.Update(car, dt); break;
+                        case TripleValveType.KType: KTypeTripleValve.Update(car, state, dt); break;
+                        case TripleValveType.Plain: PlainTripleValve.Update(car, state, dt); break;
                     }
                 }
-                ApplyBrakingForce(car);
-                UpdateBrakePipeGauge(car);
-                UpdateHUD(car);
+                ApplyBrakingForce(car, state);
+                UpdateBrakePipeGauge(car, state);
+                UpdateHUD(trainCar, state);
             }
         }
 
