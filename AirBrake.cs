@@ -233,12 +233,35 @@ namespace DvMod.AirBrake
 
         public static void Update(Brakeset brakeset, float dt)
         {
+            if (brakeset.cars.Any(car => car.GetTrainCar() == null))
+                return;
+            static string GetCarID(BrakeSystem brake)
+            {
+                if (brake == null)
+                    return "(BrakeSystem is null)";
+                else if (!brake.GetTrainCar())
+                    return "(TrainCar is null)";
+                else
+                    return brake.GetTrainCar().ID;
+            }
             AngleCocks.Update(brakeset, dt);
             BalanceBrakePipe(brakeset, dt);
             foreach (var car in brakeset.cars)
             {
-                var state = ExtraBrakeState.Instance(car);
+                if (car == null)
+                {
+                    Main.DebugLog("null BrakeSystem in brakeset");
+                    Main.DebugLog($"brakeset: {string.Join(",", brakeset.cars.Select(GetCarID))}");
+                    continue;
+                }
                 var trainCar = car.GetTrainCar();
+                if (trainCar == null)
+                {
+                    Main.DebugLog("BrakeSystem without TrainCar in brakeset");
+                    Main.DebugLog($"brakeset: {string.Join(",", brakeset.cars.Select(GetCarID))}");
+                    continue;
+                }
+                var state = ExtraBrakeState.Instance(car);
                 var carType = trainCar.carType;
                 if (car.hasCompressor)
                 {
