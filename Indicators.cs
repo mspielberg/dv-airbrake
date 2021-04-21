@@ -7,9 +7,6 @@ namespace DvMod.AirBrake
 {
     public static class Indicators
     {
-        private const string EqualizingReservoirPressure = "AirBrake.EqualizingReservoirPressure";
-        private const string BrakeCylinderPressure = "AirBrake.BrakeCylinderPressure";
-
         private static string GetPath(Component c)
         {
             return string.Join("/", c.GetComponentsInParent<Transform>(true).Reverse().Select(c => c.name));
@@ -41,43 +38,42 @@ namespace DvMod.AirBrake
             needle.transform.localPosition = new Vector3(0f, -0.001f, 0f);
         }
 
+        private static Indicator ModifyGauge(Indicator needle)
+        {
+            needle.maxValue = Constants.PressureGaugeMax;
+            var redNeedle = Object.Instantiate(needle, needle.transform.parent);
+            redNeedle.name = needle.name + " red";
+            ChangeToRedNeedle(redNeedle);
+            return redNeedle;
+        }
+
         private static void InitializeGauges(GameObject interior)
         {
             if (interior == null)
                 return;
-            // Main.DebugLog("InitializeGauges");
-            var (mainResIndicator, brakePipeIndicator) = TrainCar.Resolve(interior).carType switch
+            switch (TrainCar.Resolve(interior).carType)
             {
-                TrainCarType.LocoDiesel =>
-                (
-                    interior.GetComponent<IndicatorsDiesel>().brakeAux,
-                    interior.GetComponent<IndicatorsDiesel>().brakePipe
-                ),
-                TrainCarType.LocoShunter =>
-                (
-                    interior.GetComponent<IndicatorsShunter>().brakeAux,
-                    interior.GetComponent<IndicatorsShunter>().brakePipe
-                ),
-                TrainCarType.LocoSteamHeavy =>
-                (
-                    interior.GetComponent<IndicatorsSteam>().brakeAux,
-                    interior.GetComponent<IndicatorsSteam>().brakePipe
-                ),
-                _ => default
-            };
-            if (mainResIndicator != null)
-            {
-                mainResIndicator.maxValue = Constants.PressureGaugeMax;
-                var equalizationReservoirIndicator = Object.Instantiate(mainResIndicator, mainResIndicator.transform.parent);
-                equalizationReservoirIndicator.name = EqualizingReservoirPressure;
-                ChangeToRedNeedle(mainResIndicator);
-            }
-            if (brakePipeIndicator != null)
-            {
-                brakePipeIndicator.maxValue = Constants.PressureGaugeMax;
-                var brakeCylinderIndicator = Object.Instantiate(brakePipeIndicator, brakePipeIndicator.transform.parent);
-                brakeCylinderIndicator.name = BrakeCylinderPressure;
-                ChangeToRedNeedle(brakeCylinderIndicator);
+                case TrainCarType.LocoDiesel:
+                {
+                    var indicators = interior.GetComponent<IndicatorsDiesel>();
+                    ModifyGauge(indicators.brakePipe);
+                    indicators.brakeAux = ModifyGauge(indicators.brakeAux);
+                    break;
+                }
+                case TrainCarType.LocoShunter:
+                {
+                    var indicators = interior.GetComponent<IndicatorsShunter>();
+                    ModifyGauge(indicators.brakePipe);
+                    indicators.brakeAux = ModifyGauge(indicators.brakeAux);
+                    break;
+                }
+                case TrainCarType.LocoSteamHeavy:
+                {
+                    var indicators = interior.GetComponent<IndicatorsSteam>();
+                    indicators.brakeAux = ModifyGauge(indicators.brakeAux);
+                    ModifyGauge(indicators.brakePipe);
+                    break;
+                }
             }
         }
 
@@ -121,8 +117,8 @@ namespace DvMod.AirBrake
                         // Main.DebugLog(GetPath(indicators));
                         // Main.DebugLog(DumpHierarchy(indicators.gameObject));
                         return new ExtraIndicators(
-                            brakeCylinder: indicators.transform.Find(BrakeCylinderPressure).GetComponent<Indicator>(),
-                            equalizingReservoir: indicators.transform.Find(EqualizingReservoirPressure).GetComponent<Indicator>()
+                            brakeCylinder: indicators.brakePipe.transform.parent.Find("I brake_pipe_meter red").GetComponent<Indicator>(),
+                            equalizingReservoir: indicators.brakeAux.transform.parent.Find("I brake_aux_res_meter").GetComponent<Indicator>()
                         );
                     });
 
@@ -145,8 +141,8 @@ namespace DvMod.AirBrake
                         // Main.DebugLog(GetPath(indicators));
                         // Main.DebugLog(DumpHierarchy(indicators.gameObject));
                         return new ExtraIndicators(
-                            brakeCylinder: indicators.transform.Find(BrakeCylinderPressure).GetComponent<Indicator>(),
-                            equalizingReservoir: indicators.transform.Find(EqualizingReservoirPressure).GetComponent<Indicator>()
+                            brakeCylinder: indicators.brakePipe.transform.parent.Find("I brake needle pipe red").GetComponent<Indicator>(),
+                            equalizingReservoir: indicators.brakeAux.transform.parent.Find("I brake needle aux").GetComponent<Indicator>()
                         );
                     });
 
@@ -169,12 +165,8 @@ namespace DvMod.AirBrake
                         // Main.DebugLog(GetPath(indicators));
                         // Main.DebugLog(DumpHierarchy(indicators.gameObject));
                         return new ExtraIndicators(
-                            brakeCylinder: indicators.transform
-                                .Find($"offset/I Indicator meters/{BrakeCylinderPressure}")
-                                .GetComponent<Indicator>(),
-                            equalizingReservoir: indicators.transform
-                                .Find($"offset/I Indicator meters/{EqualizingReservoirPressure}")
-                                .GetComponent<Indicator>()
+                            brakeCylinder: indicators.brakePipe.transform.parent.Find("I brake_aux_meter red").GetComponent<Indicator>(),
+                            equalizingReservoir: indicators.brakeAux.transform.parent.Find("I brake_res_meter").GetComponent<Indicator>()
                         );
                     });
 
