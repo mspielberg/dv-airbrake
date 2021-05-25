@@ -154,10 +154,13 @@ namespace DvMod.AirBrake
             var states = brakeset.cars.Select(ExtraBrakeState.Instance).ToArray();
             var fullCycles = Mathf.Floor(Main.settings.pipeBalanceSpeed);
             var partialCycle = Main.settings.pipeBalanceSpeed - fullCycles;
+            var range = states[0].brakePipePressureUnsmoothed > states.Last().brakePipePressureUnsmoothed
+                ? Enumerable.Range(0, states.Length - 1).Reverse()
+                : Enumerable.Range(0, states.Length - 1);
 
             for (int i = 0; i < fullCycles; i++)
             {
-                for (int carIndex = 0; carIndex < states.Length - 1; carIndex++)
+                foreach (int carIndex in range)
                 {
                     var stateA = states[carIndex];
                     var pressureA = stateA.brakePipePressureUnsmoothed;
@@ -170,7 +173,7 @@ namespace DvMod.AirBrake
 
             if (partialCycle >= 0.01f)
             {
-                for (int carIndex = 0; carIndex < states.Length - 1; carIndex++)
+                foreach (int carIndex in range)
                 {
                     var stateA = states[carIndex];
                     var pressureA = stateA.brakePipePressureUnsmoothed;
