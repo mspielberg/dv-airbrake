@@ -99,11 +99,13 @@ namespace DvMod.AirBrake
         {
             public readonly Indicator brakeCylinder;
             public readonly Indicator equalizingReservoir;
+            public readonly Indicator? airflow;
 
-            public ExtraIndicators(Indicator brakeCylinder, Indicator equalizingReservoir)
+            public ExtraIndicators(Indicator brakeCylinder, Indicator equalizingReservoir, Indicator? airflow = null)
             {
                 this.brakeCylinder = brakeCylinder;
                 this.equalizingReservoir = equalizingReservoir;
+                this.airflow = airflow;
             }
         }
 
@@ -166,7 +168,8 @@ namespace DvMod.AirBrake
                         // Main.DebugLog(DumpHierarchy(indicators.gameObject));
                         return new ExtraIndicators(
                             brakeCylinder: indicators.brakePipe.transform.parent.Find("I brake_aux_meter red").GetComponent<Indicator>(),
-                            equalizingReservoir: indicators.brakeAux.transform.parent.Find("I brake_res_meter").GetComponent<Indicator>()
+                            equalizingReservoir: indicators.brakeAux.transform.parent.Find("I brake_res_meter").GetComponent<Indicator>(),
+                            airflow: indicators.brakeAux.transform.parent.Find("I ind_brake_aux_meter").GetComponent<Indicator>()
                         );
                     });
 
@@ -177,7 +180,7 @@ namespace DvMod.AirBrake
                 var indicators = extraIndicators[__instance];
                 indicators.brakeCylinder.value = state.cylinderPressure;
                 indicators.equalizingReservoir.value = state.equalizingReservoirPressure;
-                // Main.DebugLog($"{car.ID}: cylinder={state.cylinderPressure}, EQ={state.equalizingReservoirPressure}");
+                indicators.airflow!.value = state.brakePipeRechargeFlowSmoothed * indicators.airflow!.maxValue / 2f;
             }
         }
     }

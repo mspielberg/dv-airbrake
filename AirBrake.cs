@@ -35,6 +35,9 @@ namespace DvMod.AirBrake
         // Part of H6 automatic brake valve
         public float equalizingReservoirPressure;
 
+        public float brakePipeRechargeFlowSmoothed;
+        public float brakePipeRechargeFlowVel;
+
         // Type C 10" combined car equipment
         public float auxReservoirPressure;
         public TripleValveMode tripleValveMode;
