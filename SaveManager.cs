@@ -21,6 +21,8 @@ namespace DvMod.AirBrake
                     Main.DebugLog($"Skipping corrupted ExtraBrakeState {state} for {car.ID}");
                     return;
                 }
+                if (state.IsDefault)
+                    return;
 
                 Main.DebugLog($"Saving state for {car.ID}: {state}");
                 __result[SaveKey] = JObject.FromObject(state);

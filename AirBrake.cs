@@ -54,6 +54,14 @@ namespace DvMod.AirBrake
                 && float.IsFinite(equalizingReservoirPressure)
                 && float.IsFinite(auxReservoirPressure);
         }
+
+        public bool IsDefault {
+            get =>
+                brakePipePressureUnsmoothed < 1e-6f
+                && cylinderPressure < 1e-6f
+                && equalizingReservoirPressure < 1e-6f
+                && auxReservoirPressure < 1e-6f;
+        }
     }
 
     public static class BrakeSystemExtensions
