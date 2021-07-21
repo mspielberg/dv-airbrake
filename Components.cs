@@ -276,11 +276,6 @@ namespace DvMod.AirBrake.Components
                     Constants.MainReservoirVolume,
                     Main.settings.locoRechargeSpeed,
                     Constants.MaxBrakePipePressure);
-                state.brakePipeRechargeFlowSmoothed = Mathf.SmoothDamp(
-                    state.brakePipeRechargeFlowSmoothed,
-                    massFlow / dt,
-                    ref state.brakePipeRechargeFlowVel,
-                    0.5f);
                 massFlow += AirFlow.OneWayFlow(
                     dt,
                     ref state.equalizingReservoirPressure,
@@ -350,7 +345,6 @@ namespace DvMod.AirBrake.Components
 
         public static void Update(BrakeSystem car, ExtraBrakeState state, float dt)
         {
-            state.brakePipeRechargeFlowSmoothed = 0f;
             // AirBrake.DebugLog(car, $"BrakeValve6ET: initial BP={car.brakePipePressure}");
             var (mainChargeFlow, mainVentFlow) = BrakeValveH6.Update(car, state, dt);
             // AirBrake.DebugLog(car, $"BrakeValve6ET: after H6: BP={car.brakePipePressure}");
@@ -394,11 +388,6 @@ namespace DvMod.AirBrake.Components
                     Constants.MainReservoirVolume,
                     Main.settings.locoRechargeSpeed,
                     maxDestPressure: targetPressure);
-                state.brakePipeRechargeFlowSmoothed = Mathf.SmoothDamp(
-                    state.brakePipeRechargeFlowSmoothed,
-                    massFlow / dt,
-                    ref state.brakePipeRechargeFlowVel,
-                    0.5f);
                 massFlow += AirFlow.OneWayFlow(
                     dt,
                     ref state.equalizingReservoirPressure,
@@ -430,7 +419,6 @@ namespace DvMod.AirBrake.Components
 
             public static (float, float) Update(BrakeSystem car, ExtraBrakeState state, float dt)
             {
-                state.brakePipeRechargeFlowSmoothed = 0f;
                 var targetPressure = TargetPressure(car.trainBrakePosition);
                 // AirBrake.DebugLog(car, $"target={targetPressure}, EQ={state.equalizingReservoirPressure}, BP={state.brakePipePressureUnsmoothed}");
                 if (targetPressure > state.equalizingReservoirPressure || targetPressure > state.brakePipePressureUnsmoothed)

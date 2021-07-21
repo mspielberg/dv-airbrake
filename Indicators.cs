@@ -180,7 +180,7 @@ namespace DvMod.AirBrake
                 var indicators = extraIndicators[__instance];
                 indicators.brakeCylinder.value = state.cylinderPressure;
                 indicators.equalizingReservoir.value = state.equalizingReservoirPressure;
-                indicators.airflow!.value = state.brakePipeRechargeFlowSmoothed * indicators.airflow!.maxValue / 2f;
+                indicators.airflow!.value = car.brakeSystem.mainResToPipeFlow * indicators.airflow!.maxValue / 2f;
             }
         }
     }
