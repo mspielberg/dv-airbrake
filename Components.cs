@@ -378,6 +378,16 @@ namespace DvMod.AirBrake.Components
                     minPressure: state.equalizingReservoirPressure);
             }
 
+            private static float EmergencyVent(ExtraBrakeState state, float dt)
+            {
+                // AirBrake.DebugLog(car, $"BrakeValveH6.EmergencyVent");
+                return AirFlow.Vent(
+                    dt,
+                    ref state.brakePipePressureUnsmoothed,
+                    Constants.BrakePipeVolume,
+                    float.PositiveInfinity);
+            }
+
             private static float Charge(BrakeSystem car, ExtraBrakeState state, float dt, float targetPressure)
             {
                 var massFlow = AirFlow.OneWayFlow(
@@ -419,6 +429,8 @@ namespace DvMod.AirBrake.Components
 
             public static (float, float) Update(BrakeSystem car, ExtraBrakeState state, float dt)
             {
+                if (car.trainBrakePosition > 0.99f)
+                    return (0f, EmergencyVent(state, dt) + Equalize(state, dt));
                 var targetPressure = TargetPressure(car.trainBrakePosition);
                 // AirBrake.DebugLog(car, $"target={targetPressure}, EQ={state.equalizingReservoirPressure}, BP={state.brakePipePressureUnsmoothed}");
                 if (targetPressure > state.equalizingReservoirPressure || targetPressure > state.brakePipePressureUnsmoothed)
