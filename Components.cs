@@ -227,7 +227,7 @@ namespace DvMod.AirBrake.Components
                         ref state.brakePipePressureUnsmoothed,
                         Constants.BrakeCylinderVolume,
                         Constants.BrakePipeVolume,
-                        Main.settings.applySpeed * EmergencyMultiplier);
+                        Main.settings.applySpeed * EmergencyMultiplier * EmergencyMultiplier);
 
                     AirFlow.Equalize(
                         dt,
