@@ -47,20 +47,22 @@ namespace DvMod.AirBrake
             return $"BP={brakePipePressureUnsmoothed},Cyl={cylinderPressure},EQ={equalizingReservoirPressure},Aux={auxReservoirPressure},tripleMode={tripleValveMode}";
         }
 
-        public bool Valid {
-            get =>
-                float.IsFinite(brakePipePressureUnsmoothed)
-                && float.IsFinite(cylinderPressure)
-                && float.IsFinite(equalizingReservoirPressure)
-                && float.IsFinite(auxReservoirPressure);
+        private float[] FloatFields =>
+            new float[] {
+                brakePipePressureUnsmoothed,
+                cylinderPressure,
+                equalizingReservoirPressure,
+                auxReservoirPressure,
+            };
+
+        public bool Valid
+        {
+            get => !FloatFields.Any(f => float.IsInfinity(f) || float.IsNaN(f));
         }
 
-        public bool IsDefault {
-            get =>
-                brakePipePressureUnsmoothed < 1e-6f
-                && cylinderPressure < 1e-6f
-                && equalizingReservoirPressure < 1e-6f
-                && auxReservoirPressure < 1e-6f;
+        public bool IsDefault
+        {
+            get => FloatFields.All(f => f < 1e-6f);
         }
     }
 
