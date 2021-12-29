@@ -7,7 +7,7 @@ namespace DvMod.AirBrake
     public static class CarBrakeAudio
     {
         private const string GameObjectName = "DvMod.AirBrake.CylinderExhaust";
-        private const float FlowSoundMultipler = 10;
+        private const float FlowSoundMultipler = 5;
 
         [HarmonyPatch(typeof(TrainCar), nameof(TrainCar.Awake))]
         public static class TrainCarAwakePatch
