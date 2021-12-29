@@ -293,8 +293,8 @@ namespace DvMod.AirBrake
                 {
                     switch (Main.settings.tripleValveType)
                     {
-                        case TripleValveType.KType: KTypeTripleValve.Update(state, dt); break;
-                        case TripleValveType.Plain: PlainTripleValve.Update(state, dt); break;
+                        case TripleValveType.KType: KTypeTripleValve.Update(car, state, dt); break;
+                        case TripleValveType.Plain: PlainTripleValve.Update(car, state, dt); break;
                     }
                 }
                 ApplyBrakingForce(car, state);

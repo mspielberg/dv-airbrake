@@ -77,14 +77,15 @@ namespace DvMod.AirBrake.Components
         private const float SlideThreshold = 0.10f;
         private const float GraduatingThreshold = 0.05f;
 
-        public static void Update(ExtraBrakeState state, float dt)
+        public static void Update(BrakeSystem car, ExtraBrakeState state, float dt)
         {
             var delta = state.brakePipePressureUnsmoothed - state.auxReservoirPressure;
+            float exhaustFlowTarget = 0f;
             switch (state.tripleValveMode)
             {
                 case TripleValveMode.FullRelease:
                     // RELEASE
-                    AirFlow.Vent(
+                    exhaustFlowTarget = AirFlow.Vent(
                         dt,
                         ref state.cylinderPressure,
                         Constants.BrakeCylinderVolume,
@@ -101,7 +102,7 @@ namespace DvMod.AirBrake.Components
 
                     if (delta < -SlideThreshold)
                         state.tripleValveMode = TripleValveMode.Service;
-                    return;
+                    break;
 
                 case TripleValveMode.Service:
                     // APPLY
@@ -115,19 +116,24 @@ namespace DvMod.AirBrake.Components
 
                     if (delta > GraduatingThreshold)
                         state.tripleValveMode = TripleValveMode.ServiceLap;
-                    return;
+                    break;
 
                 case TripleValveMode.ServiceLap:
                     if (delta < -GraduatingThreshold)
                         state.tripleValveMode = TripleValveMode.Service;
                     else if (delta > SlideThreshold)
                         state.tripleValveMode = TripleValveMode.FullRelease;
-                    return;
+                    break;
 
                 default:
                     state.tripleValveMode = TripleValveMode.ServiceLap;
-                    return;
+                    break;
             }
+            car.pipeExhaustFlow = Mathf.SmoothDamp(
+                car.pipeExhaustFlow,
+                exhaustFlowTarget,
+                ref car.pipeExhaustFlowRef,
+                0.2f);
         }
     }
 
@@ -139,14 +145,15 @@ namespace DvMod.AirBrake.Components
         private const float GraduatingThreshold = 0.01f;
         private const float EmergencyMultiplier = 10f;
 
-        public static void Update(ExtraBrakeState state, float dt)
+        public static void Update(BrakeSystem car, ExtraBrakeState state, float dt)
         {
             var delta = state.brakePipePressureUnsmoothed - state.auxReservoirPressure;
+            float exhaustFlowTarget = 0f;
             switch (state.tripleValveMode)
             {
                 case TripleValveMode.FullRelease:
                     // RELEASE
-                    AirFlow.Vent(
+                    exhaustFlowTarget = AirFlow.Vent(
                         dt,
                         ref state.cylinderPressure,
                         Constants.BrakeCylinderVolume,
@@ -165,7 +172,7 @@ namespace DvMod.AirBrake.Components
                         state.tripleValveMode = TripleValveMode.Service;
                     else if (delta > RetardThreshold)
                         state.tripleValveMode = TripleValveMode.RetardedRelease;
-                    return;
+                    break;
 
                 case TripleValveMode.Service:
                     // APPLY (from brake pipe)
@@ -190,18 +197,18 @@ namespace DvMod.AirBrake.Components
                         state.tripleValveMode = TripleValveMode.Emergency;
                     else if (delta > GraduatingThreshold)
                         state.tripleValveMode = TripleValveMode.ServiceLap;
-                    return;
+                    break;
 
                 case TripleValveMode.ServiceLap:
                     if (delta < -GraduatingThreshold)
                         state.tripleValveMode = TripleValveMode.Service;
                     else if (delta > SlideThreshold)
                         state.tripleValveMode = TripleValveMode.FullRelease;
-                    return;
+                    break;
 
                 case TripleValveMode.RetardedRelease:
                     // RELEASE
-                    AirFlow.Vent(
+                    exhaustFlowTarget = AirFlow.Vent(
                         dt,
                         ref state.cylinderPressure,
                         Constants.BrakeCylinderVolume,
@@ -218,7 +225,7 @@ namespace DvMod.AirBrake.Components
 
                     if (delta < RetardThreshold)
                         state.tripleValveMode = TripleValveMode.FullRelease;
-                    return;
+                    break;
 
                 case TripleValveMode.Emergency:
                     AirFlow.OneWayFlow(
@@ -239,8 +246,13 @@ namespace DvMod.AirBrake.Components
 
                     if (delta > -EmergencyThreshold)
                         state.tripleValveMode = TripleValveMode.Service;
-                    return;
+                    break;
             }
+            car.pipeExhaustFlow = Mathf.SmoothDamp(
+                car.pipeExhaustFlow,
+                exhaustFlowTarget,
+                ref car.pipeExhaustFlowRef,
+                0.2f);
         }
     }
 
