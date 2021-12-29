@@ -352,12 +352,18 @@ namespace DvMod.AirBrake
             var car = PlayerManager.Car;
             if (car == null)
                 return;
-            if (KeyCode.B.IsPressed() && (KeyCode.LeftShift.IsPressed() || KeyCode.RightShift.IsPressed()))
-            {
-                var state = ExtraBrakeState.Instance(PlayerManager.Car.brakeSystem);
-                AirFlow.Vent(Time.fixedDeltaTime, ref state.auxReservoirPressure, Constants.AuxReservoirVolume, Constants.BleedValveRate);
-                AirFlow.Vent(Time.fixedDeltaTime, ref state.cylinderPressure, Constants.BrakeCylinderVolume, Constants.BleedValveRate);
-            }
+            if (!(KeyCode.B.IsPressed() && (KeyCode.LeftShift.IsPressed() || KeyCode.RightShift.IsPressed())))
+                return;
+            var brakeSystem = car.brakeSystem;
+            var state = ExtraBrakeState.Instance(brakeSystem);
+            var exhaustFlowTarget = 0f;
+            exhaustFlowTarget += AirFlow.Vent(Time.fixedDeltaTime, ref state.auxReservoirPressure, Constants.AuxReservoirVolume, Constants.BleedValveRate);
+            exhaustFlowTarget += AirFlow.Vent(Time.fixedDeltaTime, ref state.cylinderPressure, Constants.BrakeCylinderVolume, Constants.BleedValveRate);
+            brakeSystem.pipeExhaustFlow = Mathf.SmoothDamp(
+                brakeSystem.pipeExhaustFlow,
+                exhaustFlowTarget,
+                ref brakeSystem.pipeExhaustFlowRef,
+                0.2f);
         }
 
         public void FixedUpdate()
