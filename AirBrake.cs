@@ -24,7 +24,7 @@ namespace DvMod.AirBrake
 
         public const float PressureGaugeMax = 10f;
 
-        public const float BleedValveRate = 10f;
+        public const float BleedValveRate = 50f;
     }
 
     public class ExtraBrakeState
