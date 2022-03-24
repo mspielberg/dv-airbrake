@@ -1,3 +1,4 @@
+using DV.MultipleUnit;
 using DV.Simulation.Brake;
 using UnityEngine;
 
@@ -456,7 +457,6 @@ namespace DvMod.AirBrake.Components
 
         public static class BrakeValve26SA
         {
-            private const float BailoffPositionLimit = 0.1f;
             private static float Charge(BrakeSystem car, ExtraBrakeState state, float dt, float targetPressure)
             {
                 // AirBrake.DebugLog(car, $"26SA.Charge before: cylinder={state.cylinderPressure}");
@@ -485,20 +485,79 @@ namespace DvMod.AirBrake.Components
                 return massFlow;
             }
 
+            private static float Bailoff(ExtraBrakeState state, float dt)
+            {
+                // AirBrake.DebugLog(car, $"26SA.Vent before: cylinder={state.cylinderPressure}");
+                float massFlow = AirFlow.Vent(
+                    dt,
+                    ref state.cylinderPressure,
+                    Constants.BrakeCylinderVolume,
+                    Main.settings.locoReleaseSpeed);
+                massFlow += AirFlow.Vent(
+                    dt,
+                    ref state.controlReservoirPressure,
+                    Constants.BrakePipeVolume,
+                    Main.settings.locoReleaseSpeed,
+                    state.brakePipePressureUnsmoothed);
+                // AirBrake.DebugLog(car, $"26SA.Vent after: cylinder={state.cylinderPressure}");
+                return massFlow;
+            }
+
+            private static bool IsConnectedToPlayerLoco(BrakeSystem brakeSystem)
+            {
+                var car = brakeSystem.GetTrainCar();
+                var playerTrain = PlayerManager.Car;
+                if (playerTrain == car)
+                    return true; // player in this car
+                if (playerTrain != PlayerManager.LastLoco)
+                    return false; // player not in a locomotive
+                var playerTrainGO = playerTrain.gameObject;
+
+                static MultipleUnitCable? Next(MultipleUnitCable cable) {
+                    var counterpartCable = cable.connectedTo;
+                    if (counterpartCable == null)
+                        return default;
+                    var counterpartModule = counterpartCable.muModule;
+                    return counterpartCable.isFront ? counterpartModule.rearCable : counterpartModule.frontCable;
+                }
+
+                var muModule = car.GetComponent<MultipleUnitModule>();
+                if (!muModule)
+                    return false;
+                foreach (var origin in new MultipleUnitCable[] { muModule.frontCable, muModule.rearCable })
+                {
+                    for (var cable = origin; cable != null; cable = Next(cable))
+                    {
+                        if (cable.muModule.gameObject == playerTrainGO)
+                            return true;
+                    }
+                }
+                return false;
+            }
+
             public static (float, float) Update(BrakeSystem car, ExtraBrakeState state, float dt)
             {
-                var automaticTarget = Mathf.InverseLerp(Constants.MaxBrakePipePressure, Constants.FullApplicationPressure, car.brakePipePressure);
-                // AirBrake.DebugLog(car, $"BP={car.brakePipePressure}, maxCyl={Constants.FullApplicationPressure}, automaticTarget={automaticTarget}");
-                var independentTarget = Mathf.InverseLerp(BailoffPositionLimit * 2f, 1f, car.independentBrakePosition);
+                var controlChargeFlow = AirFlow.OneWayFlow(
+                    dt,
+                    ref state.controlReservoirPressure,
+                    ref state.brakePipePressureUnsmoothed,
+                    Constants.BrakePipeVolume,
+                    Constants.BrakePipeVolume,
+                    Main.settings.locoApplySpeed);
+                var automaticTarget = Mathf.Clamp01(
+                    (state.controlReservoirPressure - state.brakePipePressureUnsmoothed) /
+                    (Constants.MaxBrakePipePressure - Constants.FullApplicationPressure));
+                // AirBrake.DebugLog(car, $"BrakeValve26SA: control = {state.controlReservoirPressure},BP = {state.brakePipePressureUnsmoothed},automaticTarget = {automaticTarget}");
+                var independentTarget = car.independentBrakePosition;
                 var targetPressure = Mathf.Max(automaticTarget, independentTarget) * Constants.FullApplicationPressure;
 
-                // AirBrake.DebugLog(car, $"BrakeValve26SA: handle={car.independentBrakePosition}, cylinder = {state.cylinderPressure}, target = {targetPressure}");
-                if (car.independentBrakePosition < BailoffPositionLimit)
-                    return (0f, Vent(state, dt, 0f));
+                // AirBrake.DebugLog(car, $"BrakeValve26SA: handle = {car.independentBrakePosition}, cylinder = {state.cylinderPressure}, target = {targetPressure}");
+                if (AirBrake.IsManualReleasePressed() && IsConnectedToPlayerLoco(car))
+                    return (controlChargeFlow, Bailoff(state, dt));
                 if (targetPressure < state.cylinderPressure - Constants.ApplicationThreshold)
-                    return (0f, Vent(state, dt, targetPressure));
+                    return (controlChargeFlow, Vent(state, dt, targetPressure));
                 if (targetPressure > state.cylinderPressure + Constants.ApplicationThreshold)
-                    return (Charge(car, state, dt, targetPressure), 0f);
+                    return (controlChargeFlow + Charge(car, state, dt, targetPressure), 0f);
                 return (0f, 0f);
             }
         }

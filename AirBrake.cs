@@ -32,8 +32,9 @@ namespace DvMod.AirBrake
         public float brakePipePressureUnsmoothed;
         public float cylinderPressure;
 
-        // Part of H6 automatic brake valve
         public float equalizingReservoirPressure;
+        // Part of bailoff control for 26F control valve
+        public float controlReservoirPressure;
 
         // Type C 10" combined car equipment
         public float auxReservoirPressure;
@@ -336,6 +337,11 @@ namespace DvMod.AirBrake
             }
         }
 
+        public static bool IsManualReleasePressed()
+        {
+            return KeyCode.B.IsPressed() && (KeyCode.LeftShift.IsPressed() || KeyCode.RightShift.IsPressed());
+        }
+
         [HarmonyPatch(typeof(Brakeset), nameof(Brakeset.Update))]
         public static class BrakesetUpdatePatch
         {
@@ -385,7 +391,7 @@ namespace DvMod.AirBrake
             var car = PlayerManager.Car;
             if (car == null)
                 return;
-            if (!(KeyCode.B.IsPressed() && (KeyCode.LeftShift.IsPressed() || KeyCode.RightShift.IsPressed())))
+            if (!AirBrake.IsManualReleasePressed())
                 return;
             var brakeSystem = car.brakeSystem;
             var state = ExtraBrakeState.Instance(brakeSystem);
