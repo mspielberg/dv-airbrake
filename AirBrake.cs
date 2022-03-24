@@ -207,6 +207,38 @@ namespace DvMod.AirBrake
             car.brakingFactor = Mathf.Max(mechanicalBrakingFactor, cylinderBrakingFactor);
         }
 
+        private static void AnimateBrakePads(BrakeSystem car, ExtraBrakeState state)
+        {
+            var train = car.GetTrainCar();
+            if (train.GetComponent<TrainPhysicsLod>()?.currentLod > 1)
+                return;
+
+            const float StaticOffset = -0.005f;
+            const float MaxDynamicOffset = 0.02f;
+            var dynamicOffset = car.brakingFactor > 0 ? 0f
+                : Mathf.Lerp(MaxDynamicOffset, 0f, Mathf.InverseLerp(0f, Main.settings.returnSpringStrength, state.cylinderPressure));
+            foreach (var bogie in train.Bogies)
+            {
+                var brakeRoot = bogie.transform.Find("bogie_car/bogie2brakes");
+                if (brakeRoot == null)
+                {
+                    // Main.DebugLog("Could not find bogie2brakes");
+                    return;
+                }
+
+                var frontPad = brakeRoot.Find("Bogie2Brakes01");
+                var position = frontPad.localPosition;
+                position.z = StaticOffset + dynamicOffset;
+                frontPad.localPosition = position;
+                // Main.DebugLog($"[{train.ID}] cyl={state.cylinderPressure}, dynamicOffset={dynamicOffset} set bogie2Brakes01 to {position.z}");
+
+                var rearPad = brakeRoot.Find("Bogie2Brakes02");
+                position = rearPad.localPosition;
+                position.z = StaticOffset - dynamicOffset;
+                rearPad.localPosition = position;
+            }
+        }
+
         private static void UpdateBrakePipeGauge(BrakeSystem car, ExtraBrakeState state)
         {
             // AirBrake.DebugLog(car, $"before: BP={ExtraBrakeState.Instance(car).brakePipePressureUnsmoothed}, gauge={car.brakePipePressure}, vel={car.brakePipePressureRef}");
@@ -298,6 +330,7 @@ namespace DvMod.AirBrake
                     }
                 }
                 ApplyBrakingForce(car, state);
+                AnimateBrakePads(car, state);
                 UpdateBrakePipeGauge(car, state);
                 UpdateHUD(trainCar, state);
             }
