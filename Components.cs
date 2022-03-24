@@ -144,7 +144,7 @@ namespace DvMod.AirBrake.Components
         private const float RetardThreshold = 0.15f;
         private const float SlideThreshold = 0.10f;
         private const float GraduatingThreshold = 0.01f;
-        private const float EmergencyMultiplier = 10f;
+        private const float EmergencyMultiplier = 50f;
 
         public static void Update(BrakeSystem car, ExtraBrakeState state, float dt)
         {
