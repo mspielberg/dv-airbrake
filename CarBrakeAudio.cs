@@ -39,12 +39,12 @@ namespace DvMod.AirBrake
 
         public class BrakeCylinderExhaust : MonoBehaviour
         {
-            public LayeredAudio exhaustAudio;
-            public BrakeSystem brakeSystem;
+            public LayeredAudio? exhaustAudio;
+            public BrakeSystem? brakeSystem;
 
             public void Update()
             {
-                if (exhaustAudio && brakeSystem)
+                if (exhaustAudio != null && brakeSystem != null)
                     exhaustAudio.Set(brakeSystem.pipeExhaustFlow * FlowSoundMultipler);
             }
         }
