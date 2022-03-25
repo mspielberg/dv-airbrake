@@ -14,7 +14,8 @@ namespace DvMod.AirBrake
                 var carType = TrainCar.Resolve(spec.gameObject)?.carType;
                 if (carType != null && spec is Lever lever)
                 {
-                    if (!AirBrake.IsSelfLap((TrainCarType)carType) && lever.name == "C train_brake_lever")
+                    if (!AirBrake.IsSelfLap((TrainCarType)carType)
+                        && (lever.name == "C train_brake_lever" || lever.name == "C brake"))
                     {
                         lever.useSteppedJoint = true;
                         lever.notches = 4;
