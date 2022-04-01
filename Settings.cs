@@ -23,7 +23,7 @@ namespace DvMod.AirBrake
         public float locoRechargeSpeed = 20f;
 
         [Draw("Train brake pipe balance speed", Min = 0, Max = 100)]
-        public float pipeBalanceSpeed = 0.25f;
+        public float pipeBalanceSpeed = 4;
 
         [Draw("Car brake application speed")]
         public float applySpeed = 2f;
