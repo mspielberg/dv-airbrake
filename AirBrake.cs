@@ -222,18 +222,19 @@ namespace DvMod.AirBrake
             {
                 var brakeRoot = bogie.transform.Find("bogie_car/bogie2brakes");
                 if (brakeRoot == null)
-                {
-                    // Main.DebugLog("Could not find bogie2brakes");
                     return;
-                }
 
                 var frontPad = brakeRoot.Find("Bogie2Brakes01");
+                if (frontPad == null)
+                    return;
                 var position = frontPad.localPosition;
                 position.z = StaticOffset + dynamicOffset;
                 frontPad.localPosition = position;
                 // Main.DebugLog($"[{train.ID}] cyl={state.cylinderPressure}, dynamicOffset={dynamicOffset} set bogie2Brakes01 to {position.z}");
 
                 var rearPad = brakeRoot.Find("Bogie2Brakes02");
+                if (rearPad == null)
+                    return;
                 position = rearPad.localPosition;
                 position.z = StaticOffset - dynamicOffset;
                 rearPad.localPosition = position;
