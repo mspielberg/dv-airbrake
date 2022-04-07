@@ -30,7 +30,7 @@ namespace DvMod.AirBrake
         [Draw("Car brake release speed")]
         public float releaseSpeed = 10f;
         [Draw("Car reservoir recharge speed")]
-        public float chargeSpeed = 2f;
+        public float chargeSpeed = 4f;
 
         [Draw("Triple valve type")]
         public Components.TripleValveType tripleValveType = Components.TripleValveType.KType;
