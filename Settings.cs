@@ -28,7 +28,7 @@ namespace DvMod.AirBrake
         [Draw("Car brake application speed")]
         public float applySpeed = 2f;
         [Draw("Car brake release speed")]
-        public float releaseSpeed = 5f;
+        public float releaseSpeed = 10f;
         [Draw("Car reservoir recharge speed")]
         public float chargeSpeed = 2f;
 
@@ -37,7 +37,7 @@ namespace DvMod.AirBrake
         [Draw("K-type triple pipe drain rate", VisibleOn = "tripleValveType|KType")]
         public float kTriplePipeDrainRate = 0.1f;
         [Draw("K-type triple retarded release rate", VisibleOn = "tripleValveType|KType")]
-        public float kTripleRetardedReleaseRate = 0.2f;
+        public float kTripleRetardedReleaseRate = 0.5f;
 
         [Draw("Brake return spring strength")]
         public float returnSpringStrength = 1f;
