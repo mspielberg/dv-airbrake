@@ -54,26 +54,26 @@ namespace DvMod.AirBrake
             switch (TrainCar.Resolve(interior).carType)
             {
                 case TrainCarType.LocoDiesel:
-                {
-                    var indicators = interior.GetComponent<IndicatorsDiesel>();
-                    ModifyGauge(indicators.brakePipe);
-                    indicators.brakeAux = ModifyGauge(indicators.brakeAux);
-                    break;
-                }
+                    {
+                        var indicators = interior.GetComponent<IndicatorsDiesel>();
+                        ModifyGauge(indicators.brakePipe);
+                        indicators.brakeAux = ModifyGauge(indicators.brakeAux);
+                        break;
+                    }
                 case TrainCarType.LocoShunter:
-                {
-                    var indicators = interior.GetComponent<IndicatorsShunter>();
-                    ModifyGauge(indicators.brakePipe);
-                    indicators.brakeAux = ModifyGauge(indicators.brakeAux);
-                    break;
-                }
+                    {
+                        var indicators = interior.GetComponent<IndicatorsShunter>();
+                        ModifyGauge(indicators.brakePipe);
+                        indicators.brakeAux = ModifyGauge(indicators.brakeAux);
+                        break;
+                    }
                 case TrainCarType.LocoSteamHeavy:
-                {
-                    var indicators = interior.GetComponent<IndicatorsSteam>();
-                    indicators.brakeAux = ModifyGauge(indicators.brakeAux);
-                    ModifyGauge(indicators.brakePipe);
-                    break;
-                }
+                    {
+                        var indicators = interior.GetComponent<IndicatorsSteam>();
+                        indicators.brakeAux = ModifyGauge(indicators.brakeAux);
+                        ModifyGauge(indicators.brakePipe);
+                        break;
+                    }
             }
         }
 

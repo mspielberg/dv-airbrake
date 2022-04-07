@@ -15,7 +15,8 @@ namespace DvMod.AirBrake
 
         public TEntry this[TKey key]
         {
-            get {
+            get
+            {
                 if (cache.TryGetValue(key, out TEntry entry))
                     return entry;
                 entry = generator(key);

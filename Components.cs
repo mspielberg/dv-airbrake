@@ -54,22 +54,24 @@ namespace DvMod.AirBrake.Components
 
     public static class TripleValveModeExtensions
     {
-        public static char Abbrev(this TripleValveMode mode) => mode switch {
-            TripleValveMode.FullRelease     => 'R',
-            TripleValveMode.Service         => 'S',
-            TripleValveMode.ServiceLap      => 'L',
+        public static char Abbrev(this TripleValveMode mode) => mode switch
+        {
+            TripleValveMode.FullRelease => 'R',
+            TripleValveMode.Service => 'S',
+            TripleValveMode.ServiceLap => 'L',
             TripleValveMode.RetardedRelease => 'r',
-            TripleValveMode.Emergency       => 'E',
-            _                               => '?',
+            TripleValveMode.Emergency => 'E',
+            _ => '?',
         };
 
-        public static string FromAbbrev(char abbrev) => abbrev switch {
+        public static string FromAbbrev(char abbrev) => abbrev switch
+        {
             'R' => "Full release",
             'S' => "Service",
             'L' => "Lap",
             'r' => "Retarded release",
             'E' => "Emergency",
-            _   => "Unknown",
+            _ => "Unknown",
         };
     }
 
@@ -513,7 +515,8 @@ namespace DvMod.AirBrake.Components
                     return false; // player not in a locomotive
                 var playerTrainGO = playerTrain.gameObject;
 
-                static MultipleUnitCable? Next(MultipleUnitCable cable) {
+                static MultipleUnitCable? Next(MultipleUnitCable cable)
+                {
                     var counterpartCable = cable.connectedTo;
                     if (counterpartCable == null)
                         return default;
