@@ -27,4 +27,9 @@
     <Reference Include="UnityEngine.CoreModule"/>
     <Reference Include="UnityModManager"/>
   </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\dv-hud\HeadsUpDisplay.csproj" />
+    <ProjectReference Include="..\..\QuantitiesNet\QuantitiesNet\QuantitiesNet.csproj" />
+  </ItemGroup>
 </Project>

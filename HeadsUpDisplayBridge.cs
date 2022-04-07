@@ -1,123 +1,108 @@
 using DvMod.AirBrake.Components;
+using QuantitiesNet;
+using static QuantitiesNet.Dimensions;
 using System;
 using UnityModManagerNet;
 using Formatter = System.Func<float, string>;
 using Provider = System.Func<TrainCar, float?>;
-using Pusher = System.Action<TrainCar, float>;
 
 namespace DvMod.AirBrake
 {
     internal sealed class HeadsUpDisplayBridge
     {
-        public static HeadsUpDisplayBridge? instance;
+        public static IHeadsUpDisplayBridge? instance;
 
         static HeadsUpDisplayBridge()
         {
             try
             {
                 var hudMod = UnityModManager.FindMod("HeadsUpDisplay");
-                if (hudMod?.Loaded != true)
+                if (hudMod == null)
                     return;
-                instance = new HeadsUpDisplayBridge(hudMod);
+                if (!hudMod.Loaded)
+                    return;
+                if (hudMod.Version.Major < 1)
+                    return;
+                instance = Activator.CreateInstance<Impl>();
             }
             catch (System.IO.FileNotFoundException)
             {
             }
         }
 
-        private static readonly Type[] RegisterPullArgumentTypes = new Type[]
+        public interface IHeadsUpDisplayBridge
         {
-            typeof(string),
-            typeof(Provider),
-            typeof(Formatter),
-            typeof(IComparable)
-        };
+            public void UpdateAuxReservoirPressure(TrainCar car, float pressure);
+            public void UpdateBrakeCylinderPressure(TrainCar car, float brakeCylinderPressure);
+            public void UpdateEqualizingReservoirPressure(TrainCar car, float equalizingReservoirPressure);
+        }
 
-        private static readonly Type[] RegisterPushArgumentTypes = new Type[]
+        private class Impl : IHeadsUpDisplayBridge
         {
-            typeof(string),
-            typeof(Formatter),
-            typeof(IComparable)
-        };
+            private readonly Action<TrainCar, Quantity<Pressure>> auxReservoirPressurePusher;
+            private readonly Action<TrainCar, Quantity<Pressure>> brakeCylinderPressurePusher;
+            private readonly Action<TrainCar, Quantity<Pressure>> equalizingReservoirPressurePusher;
 
-        private readonly Pusher? auxReservoirPressurePusher;
-        private readonly Pusher? brakeCylinderPressurePusher;
-        private readonly Pusher? equalizingReservoirPressurePusher;
-
-        private HeadsUpDisplayBridge(UnityModManager.ModEntry hudMod)
-        {
-            void RegisterPull(string label, Provider provider, Formatter formatter, IComparable? order = null)
+            public Impl()
             {
-                hudMod.Invoke(
-                    "DvMod.HeadsUpDisplay.Registry.RegisterPull",
-                    out var _,
-                    new object?[] { label, provider, formatter, order },
-                    RegisterPullArgumentTypes);
+                void RegisterFloatPull(string label, Provider provider, Formatter formatter, IComparable? order = null, bool hidden = false)
+                {
+                    DvMod.HeadsUpDisplay.Registry.RegisterPull(label, provider, formatter, order ?? label, hidden);
+                }
+
+                void RegisterPush<D>(out Action<TrainCar, Quantity<D>> pusher, string label, IComparable? order = null, bool hidden = false)
+                    where D : IDimension, new()
+                {
+                    pusher = DvMod.HeadsUpDisplay.Registry.RegisterPush<D>(label, order ?? label, hidden);
+                }
+
+                RegisterFloatPull(
+                    "Train brake position",
+                    car =>
+                    {
+                        if (!CarTypes.IsLocomotive(car.carType))
+                            return null;
+                        return AirBrake.IsSelfLap(car.carType)
+                            ? car.brakeSystem.trainBrakePosition
+                            : Components.BrakeValve6ET.Mode(car.brakeSystem);
+                    },
+                    v =>
+                    {
+                        return v <= 1 ? v.ToString("P0")
+                            : v == 2 ? "Running"
+                            : v == 3 ? "Lap"
+                            : v == 4 ? "Service"
+                            : "Emergency";
+                    });
+
+                RegisterFloatPull(
+                    "Triple valve mode",
+                    car => CarTypes.IsAnyLocomotiveOrTender(car.carType)
+                        ? null
+                        : (float?)(int)ExtraBrakeState.Instance(car.brakeSystem).tripleValveMode.Abbrev(),
+                    v => Components.TripleValveModeExtensions.FromAbbrev((char)v));
+
+                RegisterPush(out auxReservoirPressurePusher, "Aux reservoir");
+
+                RegisterPush(out brakeCylinderPressurePusher, "Brake cylinder");
+
+                RegisterPush(out equalizingReservoirPressurePusher, "Equalizing reservoir");
             }
 
-            void RegisterPush(out Pusher pusher, string label, Formatter formatter, IComparable? order = null)
+            public void UpdateAuxReservoirPressure(TrainCar car, float pressure)
             {
-                hudMod.Invoke(
-                    "DvMod.HeadsUpDisplay.Registry.RegisterPush",
-                    out var temp,
-                    new object?[] { label, formatter, order },
-                    RegisterPushArgumentTypes);
-                pusher = (Pusher)temp;
+                auxReservoirPressurePusher?.Invoke(car, new Quantities.Pressure(pressure, QuantitiesNet.Units.Bar));
             }
 
-            RegisterPull(
-                "Train brake position",
-                car =>
-                {
-                    if (!CarTypes.IsLocomotive(car.carType))
-                        return null;
-                    return AirBrake.IsSelfLap(car.carType)
-                        ? car.brakeSystem.trainBrakePosition
-                        : Components.BrakeValve6ET.Mode(car.brakeSystem);
-                },
-                v =>
-                {
-                    return v <= 1 ? v.ToString("P0")
-                        : v == 2 ? "Running"
-                        : v == 3 ? "Lap"
-                        : v == 4 ? "Service"
-                        : "Emergency";
-                });
+            public void UpdateBrakeCylinderPressure(TrainCar car, float brakeCylinderPressure)
+            {
+                brakeCylinderPressurePusher?.Invoke(car, new Quantities.Pressure(brakeCylinderPressure, QuantitiesNet.Units.Bar));
+            }
 
-            RegisterPull(
-                "Triple valve mode",
-                car => CarTypes.IsAnyLocomotiveOrTender(car.carType) ? null : (float?)(int)ExtraBrakeState.Instance(car.brakeSystem).tripleValveMode.Abbrev(),
-                v => Components.TripleValveModeExtensions.FromAbbrev((char)v));
-
-            RegisterPush(
-                out auxReservoirPressurePusher,
-                "Aux reservoir",
-                v => $"{v:F2} bar");
-
-            RegisterPush(
-                out brakeCylinderPressurePusher,
-                "Brake cylinder",
-                v => $"{v:F2} bar");
-
-            RegisterPush(
-                out equalizingReservoirPressurePusher,
-                "Equalizing reservoir",
-                v => $"{v:F2} bar");
-        }
-
-        public void UpdateAuxReservoirPressure(TrainCar car, float pressure)
-        {
-            auxReservoirPressurePusher?.Invoke(car, pressure);
-        }
-
-        public void UpdateBrakeCylinderPressure(TrainCar car, float brakeCylinderPressure)
-        {
-            brakeCylinderPressurePusher?.Invoke(car, brakeCylinderPressure);
-        }
-
-        public void UpdateEqualizingReservoirPressure(TrainCar car, float equalizingReservoirPressure)
-        {
-            equalizingReservoirPressurePusher?.Invoke(car, equalizingReservoirPressure);
+            public void UpdateEqualizingReservoirPressure(TrainCar car, float equalizingReservoirPressure)
+            {
+                equalizingReservoirPressurePusher?.Invoke(car, new Quantities.Pressure(equalizingReservoirPressure, QuantitiesNet.Units.Bar));
+            }
         }
     }
 }
