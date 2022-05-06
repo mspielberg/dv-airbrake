@@ -19,7 +19,7 @@ namespace DvMod.AirBrake
                 var hudMod = UnityModManager.FindMod("HeadsUpDisplay");
                 if (hudMod == null)
                     return;
-                if (!hudMod.Loaded)
+                if (!hudMod.Active)
                     return;
                 if (hudMod.Version.Major < 1)
                     return;
