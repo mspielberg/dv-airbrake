@@ -15,3 +15,6 @@ https://asmedigitalcollection.asme.org/computationalnonlinear/article/12/5/05101
 
 McShane, C. L. (1924). Modern Air Brakes. United States: Griffin & Winters.
 https://www.google.com/books/edition/_/C8E3AAAAMAAJ?hl=en&gbpv=0
+
+8ET and AB control valve description (1945)
+https://heritagerailalliance.wildapricot.org/resources/Documents/AIR-BRAKE-WABCO-REPORT-8ET-24RL-OCT45.pdf
