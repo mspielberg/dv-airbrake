@@ -37,7 +37,7 @@ namespace DvMod.AirBrake
         {
             public static void Postfix(JObject carData, TrainCar __result)
             {
-                if (carData.TryGetValue(SaveKey, out var token) && token is JObject obj)
+                if (carData != null && __result != null && carData.TryGetValue(SaveKey, out var token) && token is JObject obj)
                 {
                     var serializer = new JsonSerializer();
                     var state = ExtraBrakeState.Instance(__result.brakeSystem);
