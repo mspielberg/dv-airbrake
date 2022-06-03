@@ -64,15 +64,35 @@ namespace DvMod.AirBrake
                             return null;
                         return AirBrake.IsSelfLap(car.carType)
                             ? car.brakeSystem.trainBrakePosition
-                            : Components.BrakeValve6ET.Mode(car.brakeSystem);
+                            : Components.BrakeValve6ET.BrakeValveH6.Mode(car.brakeSystem);
                     },
-                    v =>
+                    v => v switch
                     {
-                        return v <= 1 ? v.ToString("P0")
-                            : v == 2 ? "Running"
-                            : v == 3 ? "Lap"
-                            : v == 4 ? "Service"
-                            : "Emergency";
+                       2 => "Running",
+                       3 => "Lap",
+                       4 => "Service",
+                       5 => "Emergency",
+                       _ => v.ToString("P0"),
+                    });
+
+                RegisterFloatPull(
+                    "Independent brake position",
+                    car =>
+                    {
+                        if (!CarTypes.IsLocomotive(car.carType))
+                            return null;
+                        return AirBrake.IsSelfLap(car.carType)
+                            ? car.brakeSystem.independentBrakePosition
+                            : Components.BrakeValve6ET.BrakeValveS6.Mode(car.brakeSystem);
+                    },
+                    v => v switch
+                    {
+                        2 => "Release",
+                        3 => "Running",
+                        4 => "Lap",
+                        5 => "Slow Apply",
+                        6 => "Quick apply",
+                        _ => v.ToString("P0"),
                     });
 
                 RegisterFloatPull(
