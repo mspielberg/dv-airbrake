@@ -1,5 +1,8 @@
+using System;
+using System.Reflection;
 using HarmonyLib;
 using UnityEngine;
+using UnityModManagerNet;
 
 namespace DvMod.AirBrake
 {
@@ -24,6 +27,33 @@ namespace DvMod.AirBrake
             {
                 var car = TrainCar.Resolve(__instance.gameObject);
                 car.brakeSystem.compressorProductionRate = (1 + (__instance.engineRPM.value * 2100f / 1250f)) * BaseRate;
+            }
+        }
+
+        [HarmonyPatch]
+        public static class CCLCompressorPatch
+        {
+            public static bool Prepare()
+            {
+                return UnityModManager.FindMod("DVCustomCarLoader")?.Active ?? false;
+            }
+
+            public static MethodBase TargetMethod()
+            {
+                return AccessTools.Method(
+                    "DVCustomCarLoader.LocoComponents.DieselElectric.CustomLocoSimDiesel:SimulateEngineRPM",
+                    new Type[1] { typeof(float) });
+            }
+
+            private static readonly FieldInfo rpmField = AccessTools.Field(
+                AccessTools.TypeByName("DVCustomCarLoader.LocoComponents.DieselElectric.CustomLocoSimDiesel"),
+                "engineRPM");
+
+            public static void Prefix(Component __instance)
+            {
+                SimComponent field = (SimComponent)rpmField.GetValue(__instance);
+                TrainCar car = TrainCar.Resolve(__instance.gameObject);
+                car.brakeSystem.compressorProductionRate = (1 + (field.value * 2f)) * BaseRate;
             }
         }
     }
