@@ -1,15 +1,13 @@
+using System.Collections.Generic;
+using System.Linq;
 using UnityModManagerNet;
+using UnityEngine;
 
 namespace DvMod.AirBrake
 {
     public class Settings : UnityModManager.ModSettings, IDrawable
     {
-        [Draw("Enable self-lapping on DE2")]
-        public bool shunterSelfLap = false;
-        [Draw("Enable self-lapping on SH282")]
-        public bool steamHeavySelfLap = false;
-        [Draw("Enable self-lapping on DE6")]
-        public bool dieselSelfLap = true;
+        public List<string> selfLapCarIdentifiers = new List<string>() { "Loco Diesel" };
 
         // Reference: ~5 minutes to charge a main reservoir from empty
         // Default rate = 0.8 bar/s
@@ -45,6 +43,32 @@ namespace DvMod.AirBrake
         [Draw("Enable logging")] public bool enableLogging = false;
         public readonly string? version = Main.mod?.Info.Version;
 
+        private void DrawSelfLapSettings()
+        {
+            GUILayout.BeginVertical();
+            GUILayout.Label("Use self-lapping brake valves:");
+            foreach (var kvp in Locomotives)
+            {
+                string identifier = kvp.Value;
+                bool oldSelfLap = selfLapCarIdentifiers.Contains(identifier);
+                bool newSelfLap = GUILayout.Toggle(oldSelfLap, identifier);
+                if (oldSelfLap != newSelfLap)
+                {
+                    if (newSelfLap)
+                        selfLapCarIdentifiers.Add(identifier);
+                    else
+                        selfLapCarIdentifiers.Remove(identifier);
+                }
+            }
+            GUILayout.EndVertical();
+        }
+
+        public void Draw()
+        {
+            DrawSelfLapSettings();
+            this.Draw(Main.mod);
+        }
+
         override public void Save(UnityModManager.ModEntry entry)
         {
             Save<Settings>(this, entry);
@@ -52,6 +76,42 @@ namespace DvMod.AirBrake
 
         public void OnChange()
         {
+        }
+
+        private static IEnumerable<KeyValuePair<TrainCarType, string>> _Locomotives =
+            Enumerable.Empty<KeyValuePair<TrainCarType, string>>();
+        private static IEnumerable<KeyValuePair<TrainCarType, string>> Locomotives
+        {
+            get
+            {
+                if (_Locomotives.Any())
+                    return _Locomotives;
+                var vanillaLocomotives = new List<TrainCarType>()
+                {
+                    TrainCarType.LocoShunter,
+                    TrainCarType.LocoSteamHeavy,
+                    TrainCarType.LocoDiesel,
+                };
+
+                var cclMod = UnityModManager.FindMod("DVCustomCarLoader");
+                if (cclMod?.Active ?? false)
+                {
+                    var carManagerType = cclMod.Assembly.GetType("DVCustomCarLoader.CustomCarManager");
+                    if (carManagerType != null)
+                    {
+                        _Locomotives = ((IEnumerable<KeyValuePair<TrainCarType, string>>)carManagerType
+                            .GetMethod("GetCustomCarList")
+                            .Invoke(null, new object[0]))
+                            .Where(p => CarTypes.IsLocomotive(p.Key))
+                            .ToList();
+                    }
+                }
+
+                _Locomotives = vanillaLocomotives
+                    .Select(carType => new KeyValuePair<TrainCarType, string>(carType, carType.DisplayName()))
+                    .Concat(_Locomotives);
+                return _Locomotives;
+            }
         }
     }
 }

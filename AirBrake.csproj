@@ -25,6 +25,7 @@
     <Reference Include="DV.Utils"/>
     <Reference Include="Newtonsoft.Json"/>
     <Reference Include="UnityEngine.CoreModule"/>
+    <Reference Include="UnityEngine.IMGUIModule"/>
     <Reference Include="UnityModManager"/>
   </ItemGroup>
 

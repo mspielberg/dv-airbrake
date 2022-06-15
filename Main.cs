@@ -41,7 +41,7 @@ namespace DvMod.AirBrake
 
         static private void OnGui(UnityModManager.ModEntry modEntry)
         {
-            settings.Draw(modEntry);
+            settings.Draw();
         }
 
         static private void OnSaveGui(UnityModManager.ModEntry modEntry)

@@ -262,13 +262,7 @@ namespace DvMod.AirBrake
 
         public static bool IsSelfLap(TrainCarType carType)
         {
-            return carType switch
-            {
-                TrainCarType.LocoShunter => Main.settings.shunterSelfLap,
-                TrainCarType.LocoSteamHeavy => Main.settings.steamHeavySelfLap,
-                TrainCarType.LocoDiesel => Main.settings.dieselSelfLap,
-                _ => true,
-            };
+            return Main.settings.selfLapCarIdentifiers.Contains(carType.DisplayName());
         }
 
         private static void UpdateTender(TrainCar tender)
