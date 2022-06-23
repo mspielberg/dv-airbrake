@@ -38,7 +38,7 @@ namespace DvMod.AirBrake
         public float kTripleRetardedReleaseRate = 0.5f;
 
         [Draw("Brake return spring strength")]
-        public float returnSpringStrength = 1f;
+        public float returnSpringStrength = 0.5f;
 
         [Draw("Enable logging")] public bool enableLogging = false;
         public readonly string? version = Main.mod?.Info.Version;
