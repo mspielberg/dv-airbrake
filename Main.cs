@@ -1,3 +1,5 @@
+using System;
+
 using HarmonyLib;
 using UnityModManagerNet;
 
@@ -67,6 +69,12 @@ namespace DvMod.AirBrake
         {
             if (settings.enableLogging)
                 mod?.Logger.Log(message);
+        }
+
+        public static void DebugLog(TrainCar car, Func<string> message)
+        {
+            if (settings.enableLogging && PlayerManager.Car == car)
+                mod?.Logger.Log(message());
         }
     }
 }

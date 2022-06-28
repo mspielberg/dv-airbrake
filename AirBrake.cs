@@ -33,10 +33,12 @@ namespace DvMod.AirBrake
         public float cylinderPressure;
 
         public float equalizingReservoirPressure;
-        // Part of bailoff control for 26F control valve
+        // Part of bailoff control for 26F control valve.
+        // Also used as the Application Chamber pressure in No. 6 distributing valve.
         public float controlReservoirPressure;
 
         // Type C 10" combined car equipment
+        // Also used as the Pressure Chamber pressure in No. 6 distributing valve.
         public float auxReservoirPressure;
         public TripleValveMode tripleValveMode;
 

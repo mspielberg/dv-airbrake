@@ -418,7 +418,7 @@ namespace DvMod.AirBrake.Components
                 }
                 else if (car.independentBrakePosition < RunningPosition)
                 {
-                    return PlainTripleValve.Update(car, state, dt);
+                    return DistributingValve6.Update(car, state, dt);
                 }
                 else if (car.independentBrakePosition < LapPosition)
                 {
@@ -432,6 +432,121 @@ namespace DvMod.AirBrake.Components
                 {
                     return (0f, Apply(car, state, Main.settings.locoApplySpeed / 2f, dt));
                 }
+            }
+        }
+
+        public static class DistributingValve6
+        {
+            private const float EmergencyThreshold = 1.0f;
+            private const float SlideThreshold = 0.10f;
+            private const float GraduatingThreshold = 0.01f;
+            private const float EmergencyMultiplier = 50f;
+            private const float ControlVolumeMultiplier = 1f / 20f;
+
+            private const float MaxEmergencyPressure = 4.69f; // 68 psi
+
+            public static (float, float) Update(BrakeSystem car, ExtraBrakeState state, float dt)
+            {
+                Main.DebugLog(
+                    TrainCar.Resolve(car.gameObject),
+                    () => $"mode={state.tripleValveMode},bp={state.brakePipePressureUnsmoothed},aux={state.auxReservoirPressure},control={state.controlReservoirPressure}");
+                var delta = state.brakePipePressureUnsmoothed - state.auxReservoirPressure;
+                float exhaustFlowTarget = 0f;
+                float applyFlow = 0f;
+                switch (state.tripleValveMode)
+                {
+                    case TripleValveMode.FullRelease:
+                        // RELEASE
+                        exhaustFlowTarget = AirFlow.Vent(
+                            dt,
+                            ref state.controlReservoirPressure,
+                            Constants.BrakeCylinderVolume * ControlVolumeMultiplier,
+                            Main.settings.releaseSpeed * ControlVolumeMultiplier);
+
+                        // CHARGE
+                        AirFlow.OneWayFlow(
+                            dt,
+                            ref state.auxReservoirPressure,
+                            ref state.brakePipePressureUnsmoothed,
+                            Constants.AuxReservoirVolume * ControlVolumeMultiplier,
+                            Constants.BrakePipeVolume,
+                            Main.settings.chargeSpeed * ControlVolumeMultiplier);
+
+                        if (delta < -SlideThreshold)
+                            state.tripleValveMode = TripleValveMode.Service;
+                        break;
+
+                    case TripleValveMode.Service:
+                        AirFlow.Equalize(
+                            dt,
+                            ref state.controlReservoirPressure,
+                            ref state.auxReservoirPressure,
+                            Constants.BrakeCylinderVolume * ControlVolumeMultiplier,
+                            Constants.AuxReservoirVolume * ControlVolumeMultiplier,
+                            Main.settings.applySpeed * ControlVolumeMultiplier);
+
+                        if (delta < -EmergencyThreshold)
+                            state.tripleValveMode = TripleValveMode.Emergency;
+                        else if (delta > GraduatingThreshold)
+                            state.tripleValveMode = TripleValveMode.ServiceLap;
+                        break;
+
+                    case TripleValveMode.ServiceLap:
+                        if (delta < -GraduatingThreshold)
+                            state.tripleValveMode = TripleValveMode.Service;
+                        else if (delta > SlideThreshold)
+                            state.tripleValveMode = TripleValveMode.FullRelease;
+                        break;
+
+                    case TripleValveMode.Emergency:
+                        AirFlow.Equalize(
+                            dt,
+                            ref state.controlReservoirPressure,
+                            ref state.auxReservoirPressure,
+                            Constants.BrakeCylinderVolume * ControlVolumeMultiplier,
+                            Constants.AuxReservoirVolume * ControlVolumeMultiplier,
+                            Main.settings.applySpeed * EmergencyMultiplier * ControlVolumeMultiplier);
+                        AirFlow.OneWayFlow(
+                            dt,
+                            ref state.controlReservoirPressure,
+                            ref car.mainReservoirPressureUnsmoothed,
+                            Constants.BrakeCylinderVolume * ControlVolumeMultiplier,
+                            Constants.MainReservoirVolume,
+                            Main.settings.applySpeed * EmergencyMultiplier * ControlVolumeMultiplier,
+                            maxDestPressure: MaxEmergencyPressure);
+
+                        if (delta > -EmergencyThreshold)
+                            state.tripleValveMode = TripleValveMode.Service;
+                        break;
+                }
+                car.pipeExhaustFlow = Mathf.SmoothDamp(
+                    car.pipeExhaustFlow,
+                    exhaustFlowTarget,
+                    ref car.pipeExhaustFlowRef,
+                    0.2f);
+
+                if (state.controlReservoirPressure > state.cylinderPressure)// + SlideThreshold)
+                {
+                    AirFlow.OneWayFlow(
+                        dt,
+                        ref state.cylinderPressure,
+                        ref car.mainReservoirPressureUnsmoothed,
+                        Constants.BrakeCylinderVolume,
+                        Constants.MainReservoirVolume,
+                        Main.settings.applySpeed,
+                        maxDestPressure: state.controlReservoirPressure);
+                }
+                else if (state.controlReservoirPressure < state.cylinderPressure)// - SlideThreshold)
+                {
+                    AirFlow.Vent(
+                        dt,
+                        ref state.cylinderPressure,
+                        Constants.BrakeCylinderVolume,
+                        Main.settings.releaseSpeed,
+                        minPressure: state.controlReservoirPressure);
+                }
+
+                return (car.pipeExhaustFlow, applyFlow);
             }
         }
 
