@@ -68,11 +68,11 @@ namespace DvMod.AirBrake
                     },
                     v => v switch
                     {
-                       2 => "Running",
-                       3 => "Lap",
-                       4 => "Service",
-                       5 => "Emergency",
-                       _ => v.ToString("P0"),
+                        2 => "Running",
+                        3 => "Lap",
+                        4 => "Service",
+                        5 => "Emergency",
+                        _ => v.ToString("P0"),
                     });
 
                 RegisterFloatPull(
