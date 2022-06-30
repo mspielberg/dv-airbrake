@@ -15,10 +15,12 @@ namespace DvMod.AirBrake
         public const float MaxMainReservoirPressure = 8f;
         public const float MaxBrakePipePressure = 5f;
 
+        public const float CylinderScaleFactor = 2.5f;
+
         public const float BrakePipeVolume = 10f;
         public const float MainReservoirVolume = 20f * AuxReservoirVolume;
         public const float AuxReservoirVolume = 45f;
-        public const float BrakeCylinderVolume = AuxReservoirVolume / 2.5f;
+        public const float BrakeCylinderVolume = AuxReservoirVolume / CylinderScaleFactor;
         public const float FullApplicationPressure =
             MaxBrakePipePressure * AuxReservoirVolume / (AuxReservoirVolume + BrakeCylinderVolume);
 
@@ -39,6 +41,9 @@ namespace DvMod.AirBrake
         // Type C 10" combined car equipment
         public float auxReservoirPressure;
         public TripleValveMode tripleValveMode;
+
+        // Knorr-Bremse KE equipment
+        public float communicationChamberPressure;
 
         private static readonly Cache<BrakeSystem, ExtraBrakeState> cache = new Cache<BrakeSystem, ExtraBrakeState>(_ => new ExtraBrakeState());
         public static ExtraBrakeState Instance(BrakeSystem system) => cache[system];
@@ -321,8 +326,9 @@ namespace DvMod.AirBrake
                 {
                     switch (Main.settings.tripleValveType)
                     {
-                        case TripleValveType.KType: KTypeTripleValve.Update(car, state, dt); break;
                         case TripleValveType.Plain: PlainTripleValve.Update(car, state, dt); break;
+                        case TripleValveType.KType: KTypeTripleValve.Update(car, state, dt); break;
+                        case TripleValveType.KnorrKE: KnorrKEControlValve.Update(car, state, dt); break;
                     }
                 }
                 ApplyBrakingForce(car, state);

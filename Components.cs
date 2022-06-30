@@ -41,6 +41,7 @@ namespace DvMod.AirBrake.Components
     {
         Plain,
         KType,
+        KnorrKE,
     }
 
     public enum TripleValveMode
@@ -253,6 +254,80 @@ namespace DvMod.AirBrake.Components
                         state.tripleValveMode = TripleValveMode.Service;
                     break;
             }
+            car.pipeExhaustFlow = Mathf.SmoothDamp(
+                car.pipeExhaustFlow,
+                exhaustFlowTarget,
+                ref car.pipeExhaustFlowRef,
+                0.2f);
+        }
+    }
+
+    public static class KnorrKEControlValve
+    {
+        private const float ControlChamberVolume = 2.5f;
+        private const float CommunicationChamberVolume = 0.5f;
+        private const float FillThreshold = 0.05f;
+        private const float VentThreshold = 0.01f;
+
+        public static void Update(BrakeSystem car, ExtraBrakeState state, float dt)
+        {
+            // charge aux reservoir only if control chamber is fully charged
+            if (state.controlReservoirPressure + FillThreshold >= state.brakePipePressureUnsmoothed)
+            {
+                AirFlow.OneWayFlow(
+                    dt,
+                    ref state.auxReservoirPressure,
+                    ref state.brakePipePressureUnsmoothed,
+                    Constants.AuxReservoirVolume,
+                    Constants.BrakePipeVolume);
+            }
+
+            // charge control reservoir with reference (maximum brake pipe) pressure
+            AirFlow.OneWayFlow(
+                dt,
+                ref state.controlReservoirPressure,
+                ref state.brakePipePressureUnsmoothed,
+                ControlChamberVolume,
+                Constants.BrakePipeVolume);
+
+            float exhaustFlowTarget = 0;
+            float delta = state.controlReservoirPressure - state.brakePipePressureUnsmoothed - state.cylinderPressure / Constants.CylinderScaleFactor;
+            if (delta < VentThreshold)
+            {
+                exhaustFlowTarget = AirFlow.Vent(
+                    dt,
+                    ref state.cylinderPressure,
+                    Constants.BrakeCylinderVolume,
+                    Main.settings.releaseSpeed);
+            }
+            else if (delta > FillThreshold)
+            {
+                AirFlow.OneWayFlow(
+                    dt,
+                    ref state.cylinderPressure,
+                    ref state.auxReservoirPressure,
+                    Constants.BrakeCylinderVolume,
+                    Constants.AuxReservoirVolume,
+                    Main.settings.applySpeed);
+
+                // take from brake pipe to speed propagation
+                AirFlow.OneWayFlow(
+                    dt,
+                    ref state.communicationChamberPressure,
+                    ref state.brakePipePressureUnsmoothed,
+                    CommunicationChamberVolume,
+                    Constants.BrakePipeVolume);
+            }
+
+            // prepare to take from brake pipe next application after full release (BP reaches max pressure)
+            if (state.brakePipePressureUnsmoothed >= state.controlReservoirPressure - VentThreshold)
+            {
+                AirFlow.Vent(
+                    dt,
+                    ref state.communicationChamberPressure,
+                    CommunicationChamberVolume);
+            }
+
             car.pipeExhaustFlow = Mathf.SmoothDamp(
                 car.pipeExhaustFlow,
                 exhaustFlowTarget,
