@@ -269,6 +269,7 @@ namespace DvMod.AirBrake.Components
         private const float SlowFillThreshold = 0.3f;
         private const float FillThreshold = 0.05f;
         private const float VentThreshold = 0.01f;
+        private const float SlowFillMultiplier = 0.25f;
 
         public static void Update(BrakeSystem car, ExtraBrakeState state, float dt)
         {
@@ -281,8 +282,8 @@ namespace DvMod.AirBrake.Components
                     ref state.brakePipePressureUnsmoothed,
                     Constants.AuxReservoirVolume,
                     Constants.BrakePipeVolume,
-                    state.controlReservoirPressure - state.auxReservoirPressure < SlowFillThreshold
-                        ? 0.25f : 1f);
+                    Main.settings.chargeSpeed *
+                        (state.controlReservoirPressure - state.auxReservoirPressure < SlowFillThreshold ? 0.25f : 1f));
             }
 
             // charge control reservoir with reference (maximum brake pipe) pressure
@@ -291,7 +292,8 @@ namespace DvMod.AirBrake.Components
                 ref state.controlReservoirPressure,
                 ref state.brakePipePressureUnsmoothed,
                 ControlChamberVolume,
-                Constants.BrakePipeVolume);
+                Constants.BrakePipeVolume,
+                Main.settings.chargeSpeed);
 
             float exhaustFlowTarget = 0;
             float delta = state.controlReservoirPressure - state.brakePipePressureUnsmoothed - state.cylinderPressure / Constants.CylinderScaleFactor;
