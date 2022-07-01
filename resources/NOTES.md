@@ -18,3 +18,9 @@ https://www.google.com/books/edition/_/C8E3AAAAMAAJ?hl=en&gbpv=0
 
 8ET and AB control valve description (1945)
 https://heritagerailalliance.wildapricot.org/resources/Documents/AIR-BRAKE-WABCO-REPORT-8ET-24RL-OCT45.pdf
+
+Description of functioning of Knorr Bremse components
+http://www.bremsenbude.de/
+
+Knorr Bremse handbook (1976)
+https://www.jernbanearkivalier.dk/bremser/knorr-bremse-handbuch1976.pdf
