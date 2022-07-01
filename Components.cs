@@ -299,6 +299,7 @@ namespace DvMod.AirBrake.Components
                     ref state.cylinderPressure,
                     Constants.BrakeCylinderVolume,
                     Main.settings.releaseSpeed);
+                state.tripleValveMode = TripleValveMode.FullRelease;
             }
             else if (delta > FillThreshold)
             {
@@ -317,6 +318,11 @@ namespace DvMod.AirBrake.Components
                     ref state.brakePipePressureUnsmoothed,
                     CommunicationChamberVolume,
                     Constants.BrakePipeVolume);
+                state.tripleValveMode = TripleValveMode.Service;
+            }
+            else
+            {
+                state.tripleValveMode = TripleValveMode.ServiceLap;
             }
 
             // prepare to take from brake pipe next application after full release (BP reaches max pressure)
