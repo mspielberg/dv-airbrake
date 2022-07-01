@@ -266,6 +266,7 @@ namespace DvMod.AirBrake.Components
     {
         private const float ControlChamberVolume = 2.5f;
         private const float CommunicationChamberVolume = 0.5f;
+        private const float SlowFillThreshold = 0.3f;
         private const float FillThreshold = 0.05f;
         private const float VentThreshold = 0.01f;
 
@@ -279,7 +280,9 @@ namespace DvMod.AirBrake.Components
                     ref state.auxReservoirPressure,
                     ref state.brakePipePressureUnsmoothed,
                     Constants.AuxReservoirVolume,
-                    Constants.BrakePipeVolume);
+                    Constants.BrakePipeVolume,
+                    state.controlReservoirPressure - state.auxReservoirPressure < SlowFillThreshold
+                        ? 0.25f : 1f);
             }
 
             // charge control reservoir with reference (maximum brake pipe) pressure
