@@ -57,7 +57,7 @@ namespace DvMod.AirBrake
                     if (newSelfLap)
                         selfLapCarIdentifiers.Add(identifier);
                     else
-                        selfLapCarIdentifiers.Remove(identifier);
+                        selfLapCarIdentifiers.RemoveAll(x => x == identifier);
                 }
             }
             GUILayout.EndVertical();
