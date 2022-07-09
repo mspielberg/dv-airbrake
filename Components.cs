@@ -296,14 +296,17 @@ namespace DvMod.AirBrake.Components
                 Main.settings.chargeSpeed);
 
             float exhaustFlowTarget = 0;
-            float delta = state.controlReservoirPressure - state.brakePipePressureUnsmoothed - state.cylinderPressure / Constants.CylinderScaleFactor;
+            float delta = state.controlReservoirPressure - state.brakePipePressureUnsmoothed
+                - (state.cylinderPressure / Constants.CylinderScaleFactor);
+            float pressureTarget = Constants.CylinderScaleFactor * (state.controlReservoirPressure - state.brakePipePressureUnsmoothed);
             if (delta < VentThreshold)
             {
                 exhaustFlowTarget = AirFlow.Vent(
                     dt,
                     ref state.cylinderPressure,
                     Constants.BrakeCylinderVolume,
-                    Main.settings.releaseSpeed);
+                    Main.settings.releaseSpeed,
+                    pressureTarget);
                 state.tripleValveMode = TripleValveMode.FullRelease;
             }
             else if (delta > FillThreshold)
@@ -314,7 +317,8 @@ namespace DvMod.AirBrake.Components
                     ref state.auxReservoirPressure,
                     Constants.BrakeCylinderVolume,
                     Constants.AuxReservoirVolume,
-                    Main.settings.applySpeed);
+                    Main.settings.applySpeed,
+                    pressureTarget);
 
                 // take from brake pipe to speed propagation
                 AirFlow.OneWayFlow(
