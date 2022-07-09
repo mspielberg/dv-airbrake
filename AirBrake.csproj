@@ -26,6 +26,7 @@
     <Reference Include="Newtonsoft.Json"/>
     <Reference Include="UnityEngine.CoreModule"/>
     <Reference Include="UnityEngine.IMGUIModule"/>
+    <Reference Include="UnityEngine.PhysicsModule"/>
     <Reference Include="UnityModManager"/>
   </ItemGroup>
 
