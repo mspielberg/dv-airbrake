@@ -1,6 +1,7 @@
 using DV.CabControls;
 using DV.CabControls.Spec;
 using HarmonyLib;
+using UnityEngine;
 
 namespace DvMod.AirBrake
 {
@@ -29,6 +30,27 @@ namespace DvMod.AirBrake
                         lever.scrollWheelHoverScroll = 1;
                     }
                 }
+            }
+        }
+
+        [HarmonyPatch(typeof(SteppedJoint), nameof(SteppedJoint.Update))]
+        public static class SteppedJointUpdatePatch
+        {
+            public static void Postfix(SteppedJoint __instance)
+            {
+                if (!__instance.isSpringActive || __instance.notches != 5)
+                    return;
+
+                var spring = __instance.joint.spring;
+                var currentAngle = spring.targetPosition - __instance.joint.limits.min;
+                var newAngle = Mathf.Clamp(
+                    currentAngle,
+                    1 * __instance.SingleNotchAngle, // 2nd notch
+                    3 * __instance.SingleNotchAngle); // 4th notch
+                if (newAngle == currentAngle)
+                    return;
+                spring.targetPosition = newAngle + __instance.joint.limits.min;
+                __instance.joint.spring = spring;
             }
         }
     }
