@@ -50,7 +50,7 @@ namespace DvMod.AirBrake
 
         public override string ToString()
         {
-            return $"BP={brakePipePressureUnsmoothed},Cyl={cylinderPressure},EQ={equalizingReservoirPressure},Aux={auxReservoirPressure},tripleMode={tripleValveMode}";
+            return $"BP={brakePipePressureUnsmoothed},Cyl={cylinderPressure},EQ={equalizingReservoirPressure},Control={controlReservoirPressure},Aux={auxReservoirPressure},tripleMode={tripleValveMode},U={communicationChamberPressure}";
         }
 
         private float[] FloatFields =>
@@ -58,7 +58,9 @@ namespace DvMod.AirBrake
                 brakePipePressureUnsmoothed,
                 cylinderPressure,
                 equalizingReservoirPressure,
+                controlReservoirPressure,
                 auxReservoirPressure,
+                communicationChamberPressure,
             };
 
         public bool Valid
