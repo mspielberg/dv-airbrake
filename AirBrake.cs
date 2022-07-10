@@ -340,9 +340,9 @@ namespace DvMod.AirBrake
             }
         }
 
-        public static bool IsManualReleasePressed()
+        public static bool IsManualReleasePressed(BrakeSystem brakeSystem)
         {
-            return Main.settings.manualBrakeRelease.Pressed();
+            return PlayerManager.Car?.brakeSystem == brakeSystem && Main.settings.manualBrakeRelease.Pressed();
         }
 
         [HarmonyPatch(typeof(Brakeset), nameof(Brakeset.Update))]
@@ -389,30 +389,11 @@ namespace DvMod.AirBrake
             }
         }
 
-        private static void CheckKeyInput()
-        {
-            var car = PlayerManager.Car;
-            if (car == null)
-                return;
-            if (!AirBrake.IsManualReleasePressed())
-                return;
-            var brakeSystem = car.brakeSystem;
-            var state = ExtraBrakeState.Instance(brakeSystem);
-            var exhaustFlowTarget = 0f;
-            exhaustFlowTarget += AirFlow.Vent(Time.fixedDeltaTime, ref state.cylinderPressure, Constants.BrakeCylinderVolume, Constants.BleedValveRate);
-            brakeSystem.pipeExhaustFlow = Mathf.SmoothDamp(
-                brakeSystem.pipeExhaustFlow,
-                exhaustFlowTarget,
-                ref brakeSystem.pipeExhaustFlowRef,
-                0.2f);
-        }
-
         public void FixedUpdate()
         {
             Assert.IsTrue(Main.enabled);
             foreach (var brakeset in Brakeset.allSets)
                 AirBrake.Update(brakeset, Time.fixedDeltaTime);
-            CheckKeyInput();
         }
     }
 }

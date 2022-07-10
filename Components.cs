@@ -134,6 +134,16 @@ namespace DvMod.AirBrake.Components
                     state.tripleValveMode = TripleValveMode.ServiceLap;
                     break;
             }
+
+            if (AirBrake.IsManualReleasePressed(car))
+            {
+                exhaustFlowTarget += AirFlow.Vent(
+                    dt,
+                    ref state.cylinderPressure,
+                    Constants.BrakeCylinderVolume,
+                    Constants.BleedValveRate);
+            }
+
             car.pipeExhaustFlow = Mathf.SmoothDamp(
                 car.pipeExhaustFlow,
                 exhaustFlowTarget,
@@ -254,6 +264,16 @@ namespace DvMod.AirBrake.Components
                         state.tripleValveMode = TripleValveMode.Service;
                     break;
             }
+
+            if (AirBrake.IsManualReleasePressed(car))
+            {
+                exhaustFlowTarget += AirFlow.Vent(
+                    dt,
+                    ref state.cylinderPressure,
+                    Constants.BrakeCylinderVolume,
+                    Constants.BleedValveRate);
+            }
+
             car.pipeExhaustFlow = Mathf.SmoothDamp(
                 car.pipeExhaustFlow,
                 exhaustFlowTarget,
@@ -341,6 +361,15 @@ namespace DvMod.AirBrake.Components
                     dt,
                     ref state.communicationChamberPressure,
                     CommunicationChamberVolume);
+            }
+
+            if (AirBrake.IsManualReleasePressed(car))
+            {
+                exhaustFlowTarget += AirFlow.Vent(
+                    dt,
+                    ref state.controlReservoirPressure,
+                    ControlChamberVolume,
+                    Constants.BleedValveRate);
             }
 
             car.pipeExhaustFlow = Mathf.SmoothDamp(
@@ -722,7 +751,7 @@ namespace DvMod.AirBrake.Components
                 var targetPressure = Mathf.Max(automaticTarget, independentTarget) * Constants.FullApplicationPressure;
 
                 // AirBrake.DebugLog(car, $"BrakeValve26SA: handle = {car.independentBrakePosition}, cylinder = {state.cylinderPressure}, target = {targetPressure}");
-                if (AirBrake.IsManualReleasePressed() && IsConnectedToPlayerLoco(car))
+                if (AirBrake.IsManualReleasePressed(car) && IsConnectedToPlayerLoco(car))
                     return (controlChargeFlow, Bailoff(state, dt));
                 if (targetPressure < state.cylinderPressure - Constants.ApplicationThreshold)
                     return (controlChargeFlow, Vent(state, dt, targetPressure));
