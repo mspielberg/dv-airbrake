@@ -1,5 +1,7 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
+using UnityEngine;
 
 namespace DvMod.AirBrake
 {
@@ -23,6 +25,19 @@ namespace DvMod.AirBrake
                 cache[key] = entry;
                 return entry;
             }
+        }
+    }
+
+    public static class UnityExtensions
+    {
+        public static string GetPath(this Component c)
+        {
+            return string.Join("/", c.GetComponentsInParent<Transform>(true).Reverse().Select(c => c.name));
+        }
+
+        public static string DumpHierarchy(this GameObject gameObject)
+        {
+            return string.Join("\n", gameObject.GetComponentsInChildren<Component>().Select(c => $"{GetPath(c)} {c.GetType()}"));
         }
     }
 }

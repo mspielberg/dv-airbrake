@@ -7,16 +7,6 @@ namespace DvMod.AirBrake
 {
     public static class Indicators
     {
-        private static string GetPath(Component c)
-        {
-            return string.Join("/", c.GetComponentsInParent<Transform>(true).Reverse().Select(c => c.name));
-        }
-
-        private static string DumpHierarchy(GameObject gameObject)
-        {
-            return string.Join("\n", gameObject.GetComponentsInChildren<Component>().Select(c => $"{GetPath(c)} {c.GetType()}"));
-        }
-
         private static Material? redMaterial;
         private static void ChangeToRedNeedle(Indicator gauge)
         {
