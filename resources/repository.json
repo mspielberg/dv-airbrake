@@ -1,6 +1,7 @@
 {
   "Releases":
   [
+      {"Id": "AirBrake", "Version": "0.12.1", "DownloadUrl": "https://github.com/mspielberg/dv-airbrake/releases/download/v0.12.1/AirBrake_0.12.1.zip"},
       {"Id": "AirBrake", "Version": "0.12.0", "DownloadUrl": "https://github.com/mspielberg/dv-airbrake/releases/download/v0.12.0/AirBrake_0.12.0.zip"},
       {"Id": "AirBrake", "Version": "0.11.0", "DownloadUrl": "https://github.com/mspielberg/dv-airbrake/releases/download/v0.11.0/AirBrake_0.11.0.zip"},
       {"Id": "AirBrake", "Version": "0.10.0", "DownloadUrl": "https://github.com/mspielberg/dv-airbrake/releases/download/v0.10.0/AirBrake_0.10.0.zip"},
