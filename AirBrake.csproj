@@ -24,6 +24,7 @@
     <Reference Include="DV.Interaction"/>
     <Reference Include="DV.Utils"/>
     <Reference Include="Newtonsoft.Json"/>
+    <Reference Include="UnityEngine"/>
     <Reference Include="UnityEngine.CoreModule"/>
     <Reference Include="UnityEngine.IMGUIModule"/>
     <Reference Include="UnityEngine.PhysicsModule"/>

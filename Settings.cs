@@ -40,8 +40,16 @@ namespace DvMod.AirBrake
         [Draw("Brake return spring strength")]
         public float returnSpringStrength = 0.5f;
 
+        [Draw("Manual brake release keybind")]
+        public KeyBinding manualBrakeRelease = new KeyBinding();
+
         [Draw("Enable logging")] public bool enableLogging = false;
         public readonly string? version = Main.mod?.Info.Version;
+
+        public Settings()
+        {
+            manualBrakeRelease.Change(KeyCode.B, ctrl: false, shift: true, alt: false);
+        }
 
         private void DrawSelfLapSettings()
         {

@@ -342,7 +342,7 @@ namespace DvMod.AirBrake
 
         public static bool IsManualReleasePressed()
         {
-            return KeyCode.B.IsPressed() && (KeyCode.LeftShift.IsPressed() || KeyCode.RightShift.IsPressed());
+            return Main.settings.manualBrakeRelease.Pressed();
         }
 
         [HarmonyPatch(typeof(Brakeset), nameof(Brakeset.Update))]
