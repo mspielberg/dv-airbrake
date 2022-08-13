@@ -14,6 +14,7 @@ namespace DvMod.AirBrake
 
         public const float MaxMainReservoirPressure = 8f;
         public const float MaxBrakePipePressure = 5f;
+        public const float MinimumReduction = 0.4f;
 
         public const float CylinderScaleFactor = 2.5f;
 
@@ -21,8 +22,8 @@ namespace DvMod.AirBrake
         public const float MainReservoirVolume = 20f * AuxReservoirVolume;
         public const float AuxReservoirVolume = 45f;
         public const float BrakeCylinderVolume = AuxReservoirVolume / CylinderScaleFactor;
-        public const float FullApplicationPressure =
-            MaxBrakePipePressure * AuxReservoirVolume / (AuxReservoirVolume + BrakeCylinderVolume);
+        public const float FullApplicationPressure = 3.5f;
+            // MaxBrakePipePressure * AuxReservoirVolume / (AuxReservoirVolume + BrakeCylinderVolume);
 
         public const float PressureGaugeMax = 10f;
 

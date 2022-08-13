@@ -629,14 +629,15 @@ namespace DvMod.AirBrake.Components
                     minPressure: targetPressure);
             }
 
-            private const float MinimumReduction = Constants.MaxBrakePipePressure - 0.4f;
-            private const float Curve = 2f;
             private static float TargetPressure(float trainBrakePosition)
             {
                 if (trainBrakePosition < 0.01f)
                     return Constants.MaxBrakePipePressure;
                 else
-                    return Mathf.Lerp(MinimumReduction, 0f, Mathf.Pow(trainBrakePosition, Curve));
+                    return Mathf.Lerp(
+                        Constants.MaxBrakePipePressure - Constants.MinimumReduction,
+                        Constants.FullApplicationPressure,
+                        Mathf.InverseLerp(0.05f, 0.9f, trainBrakePosition));
             }
 
             public static (float, float) Update(BrakeSystem car, ExtraBrakeState state, float dt)
